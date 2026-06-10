@@ -1,0 +1,35 @@
+import type { Problem } from '../types'
+import { today, addDays } from './dates'
+
+export interface SM2Result {
+  interval: number
+  nextReview: string
+  easeFactor: number
+}
+
+export function calculateNextReview(problem: Problem, rating: 1 | 2 | 3 | 4 | 5): SM2Result {
+  const isFirstReview = problem.reviews.length === 0
+  const prevInterval = problem.interval
+
+  let interval: number
+  if (rating < 3) {
+    interval = 1
+  } else if (rating === 3) {
+    interval = 2
+  } else if (rating === 4) {
+    interval = isFirstReview ? 3 : Math.round(prevInterval * 1.5)
+  } else {
+    interval = isFirstReview ? 7 : Math.round(prevInterval * 2.5)
+  }
+
+  interval = Math.min(30, Math.max(1, interval))
+
+  const r = rating
+  const newEF = Math.max(1.3, problem.ease_factor + (0.1 - (5 - r) * (0.08 + (5 - r) * 0.02)))
+
+  return {
+    interval,
+    nextReview: addDays(today(), interval),
+    easeFactor: Math.round(newEF * 100) / 100,
+  }
+}

@@ -1,0 +1,80 @@
+import { useMemo } from 'react'
+import type { Problem, Pattern } from '../types'
+import { today, daysBetween } from '../utils/dates'
+
+export function useStats(problems: Problem[]) {
+  return useMemo(() => {
+    const totalProblems = problems.length
+
+    // Reviews in last 7 days
+    const cutoff7 = new Date(today() + 'T00:00:00')
+    cutoff7.setDate(cutoff7.getDate() - 6)
+    const cutoff7Str = cutoff7.toISOString().split('T')[0]
+    const reviewsThisWeek = problems.reduce((acc, p) =>
+      acc + p.reviews.filter(r => r.date >= cutoff7Str).length, 0)
+
+    // Streak: consecutive calendar days ending today with ≥1 review
+    const allDates = new Set<string>()
+    for (const p of problems) {
+      for (const r of p.reviews) allDates.add(r.date)
+    }
+    let streak = 0
+    const t = today()
+    if (allDates.has(t)) {
+      streak = 1
+      let check = t
+      while (true) {
+        const prev = new Date(check + 'T00:00:00')
+        prev.setDate(prev.getDate() - 1)
+        const prevStr = prev.toISOString().split('T')[0]
+        if (allDates.has(prevStr)) {
+          streak++
+          check = prevStr
+        } else {
+          break
+        }
+      }
+    }
+
+    // Weakest pattern: pattern with most problems whose last comfort rating < 3
+    const patternWeakCount: Partial<Record<Pattern, number>> = {}
+    for (const p of problems) {
+      if (p.comfort_history.length === 0) continue
+      const lastComfort = p.comfort_history[p.comfort_history.length - 1]
+      if (lastComfort < 3) {
+        patternWeakCount[p.pattern] = (patternWeakCount[p.pattern] ?? 0) + 1
+      }
+    }
+    let weakestPattern: Pattern | null = null
+    let maxWeak = 0
+    for (const [pattern, count] of Object.entries(patternWeakCount) as [Pattern, number][]) {
+      if (count > maxWeak) {
+        maxWeak = count
+        weakestPattern = pattern
+      }
+    }
+
+    // Next upcoming review date (for empty queue message)
+    const upcoming = problems
+      .filter(p => p.next_review > today())
+      .sort((a, b) => a.next_review.localeCompare(b.next_review))
+    const nextReviewDate = upcoming.length > 0 ? upcoming[0].next_review : null
+
+    // Average comfort per pattern (for analytics)
+    const patternComforts: Partial<Record<Pattern, number[]>> = {}
+    for (const p of problems) {
+      if (p.comfort_history.length === 0) continue
+      if (!patternComforts[p.pattern]) patternComforts[p.pattern] = []
+      patternComforts[p.pattern]!.push(...p.comfort_history)
+    }
+
+    return {
+      totalProblems,
+      reviewsThisWeek,
+      streak,
+      weakestPattern,
+      nextReviewDate,
+      patternComforts,
+    }
+  }, [problems])
+}

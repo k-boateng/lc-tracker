@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme colors as RGB channels so Tailwind opacity modifiers work */
+:root {
+  --c-bg: 245 245 245;
+  --c-surface: 255 255 255;
+  --c-border: 220 220 220;
+  --c-primary: 17 24 39;
+  --c-secondary: 107 114 128;
+  --heatmap-empty: #dde1e7;
+}
+
+.dark {
+  --c-bg: 15 15 15;
+  --c-surface: 26 26 26;
+  --c-border: 42 42 42;
+  --c-primary: 240 240 240;
+  --c-secondary: 136 136 136;
+  --heatmap-empty: #262626;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: rgb(var(--c-bg));
+  color: rgb(var(--c-primary));
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
