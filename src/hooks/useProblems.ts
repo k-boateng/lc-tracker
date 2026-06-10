@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Problem, Review } from '../types'
-import { getProblems, saveProblems } from '../utils/storage'
+import * as api from '../utils/api'
 import { calculateNextReview } from '../utils/sm2'
 import { today } from '../utils/dates'
+import { useAuth } from '../contexts/AuthContext'
 
 export interface NewProblemData {
   name: string
@@ -18,14 +19,43 @@ export interface NewProblemData {
 }
 
 export function useProblems() {
-  const [problems, setProblems] = useState<Problem[]>(() => getProblems())
+  const { session } = useAuth()
+  const userId = session?.user.id
+  const [problems, setProblems] = useState<Problem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const persist = useCallback((updated: Problem[]) => {
-    saveProblems(updated)
+  const refetch = useCallback(async () => {
+    if (!userId) return
+    try {
+      setProblems(await api.fetchProblems())
+      setError(null)
+    } catch (e: any) {
+      setError(e.message ?? 'Failed to load problems')
+    }
+  }, [userId])
+
+  useEffect(() => {
+    if (!userId) {
+      setProblems([])
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    refetch().finally(() => setLoading(false))
+  }, [userId, refetch])
+
+  // Optimistic update: apply locally, write to Supabase, refetch on failure
+  const mutate = useCallback((updated: Problem[], write: () => Promise<void>) => {
     setProblems(updated)
-  }, [])
+    write().catch(e => {
+      setError(e.message ?? 'Save failed — reloading')
+      refetch()
+    })
+  }, [refetch])
 
   const addProblem = useCallback((data: NewProblemData) => {
+    if (!userId) return
     const stub: Problem = {
       id: uuidv4(),
       name: data.name,
@@ -52,18 +82,18 @@ export function useProblems() {
       comfort_history: [data.initialComfort],
       reviews: [{ date: today(), comfort: data.initialComfort }],
     }
-    persist([...problems, problem])
+    mutate([...problems, problem], () => api.insertProblem(problem, userId))
     return problem
-  }, [problems, persist])
+  }, [problems, userId, mutate])
 
   const updateProblem = useCallback((id: string, updates: Partial<Omit<Problem, 'id'>>) => {
     const updated = problems.map(p => p.id === id ? { ...p, ...updates } : p)
-    persist(updated)
-  }, [problems, persist])
+    mutate(updated, () => api.updateProblem(id, updates))
+  }, [problems, mutate])
 
   const deleteProblem = useCallback((id: string) => {
-    persist(problems.filter(p => p.id !== id))
-  }, [problems, persist])
+    mutate(problems.filter(p => p.id !== id), () => api.deleteProblem(id))
+  }, [problems, mutate])
 
   const logReview = useCallback((
     id: string,
@@ -71,6 +101,7 @@ export function useProblems() {
     time_spent_minutes?: number,
     notes?: string,
   ) => {
+    if (!userId) return
     const problem = problems.find(p => p.id === id)
     if (!problem) return
 
@@ -85,8 +116,21 @@ export function useProblems() {
       ease_factor: easeFactor,
       comfort_history: [...problem.comfort_history, comfort],
     }
-    persist(problems.map(p => p.id === id ? updated : p))
-  }, [problems, persist])
+    mutate(
+      problems.map(p => p.id === id ? updated : p),
+      () => api.insertReview(id, userId, review, {
+        interval,
+        next_review: nextReview,
+        ease_factor: easeFactor,
+      })
+    )
+  }, [problems, userId, mutate])
 
-  return { problems, addProblem, updateProblem, deleteProblem, logReview }
+  const importProblems = useCallback(async (imported: Problem[]) => {
+    if (!userId) return
+    await api.bulkImport(imported, userId)
+    await refetch()
+  }, [userId, refetch])
+
+  return { problems, loading, error, addProblem, updateProblem, deleteProblem, logReview, importProblems, refetch }
 }

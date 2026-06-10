@@ -1,13 +1,17 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '⬛' },
   { to: '/library', label: 'Library', icon: '☰' },
   { to: '/analytics', label: 'Analytics', icon: '▦' },
+  { to: '/groups', label: 'Groups', icon: '◎' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ]
 
 export function Layout() {
+  const { profile, signOut } = useAuth()
+
   return (
     <div className="flex h-screen bg-bg text-primary overflow-hidden">
       {/* Sidebar */}
@@ -35,10 +39,24 @@ export function Layout() {
             </NavLink>
           ))}
         </div>
-        <div className="p-3 border-t border-border">
-          <div className="text-xs text-secondary/60 font-sans">
-            All data in localStorage
+        <div className="p-3 border-t border-border flex items-center gap-2">
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="w-6 h-6 rounded-full flex-shrink-0" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-mono flex-shrink-0">
+              {profile?.username?.[0]?.toUpperCase() ?? '?'}
+            </div>
+          )}
+          <div className="text-xs text-primary truncate flex-1 font-mono">
+            {profile?.username ?? '...'}
           </div>
+          <button
+            onClick={signOut}
+            title="Sign out"
+            className="text-xs text-secondary hover:text-danger transition-colors flex-shrink-0"
+          >
+            ⏻
+          </button>
         </div>
       </nav>
 

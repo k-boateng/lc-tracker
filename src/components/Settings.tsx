@@ -1,15 +1,18 @@
 import { useState, useRef } from 'react'
 import type { Problem } from '../types'
-import { getSettings, saveSettings, clearAllData } from '../utils/storage'
+import { getSettings, saveSettings } from '../utils/storage'
+import { deleteAllProblems } from '../utils/api'
+import { useAuth } from '../contexts/AuthContext'
 
 interface Props {
   problems: Problem[]
   isDark: boolean
   onToggleDark: () => void
-  onImport: (problems: Problem[]) => void
+  onImport: (problems: Problem[]) => Promise<void>
 }
 
 export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
+  const { session } = useAuth()
   const [dailyGoal, setDailyGoal] = useState(() => getSettings().dailyGoal)
   const [importError, setImportError] = useState('')
   const [importSuccess, setImportSuccess] = useState(false)
@@ -32,11 +35,11 @@ export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
     setImportError('')
     setImportSuccess(false)
     const reader = new FileReader()
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string)
         if (!Array.isArray(data)) throw new Error('Expected an array of problems')
-        onImport(data as Problem[])
+        await onImport(data as Problem[])
         setImportSuccess(true)
         setTimeout(() => setImportSuccess(false), 3000)
       } catch (err: any) {
@@ -47,10 +50,16 @@ export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
     e.target.value = ''
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (confirmReset) {
-      clearAllData()
-      window.location.reload()
+      if (!session) return
+      try {
+        await deleteAllProblems(session.user.id)
+        window.location.reload()
+      } catch (err: any) {
+        setImportError(err.message ?? 'Reset failed')
+        setConfirmReset(false)
+      }
     } else {
       setConfirmReset(true)
     }
@@ -106,7 +115,7 @@ export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
       <section className="bg-surface border border-border rounded-lg p-5 space-y-4">
         <div className="text-xs text-secondary uppercase tracking-wider">Data</div>
         <div className="text-xs text-secondary bg-warning/10 border border-warning/30 rounded px-3 py-2">
-          All data lives in your browser's localStorage. Export regularly as backup — clearing browser data will erase everything.
+          Your data syncs to the cloud and is available on any device you sign in to. Export occasionally as an extra backup.
         </div>
 
         <div className="flex flex-col gap-3">

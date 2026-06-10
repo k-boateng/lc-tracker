@@ -3,7 +3,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell,
 } from 'recharts'
-import type { Problem, Pattern } from '../types'
+import type { Problem } from '../types'
 import { today, toISO } from '../utils/dates'
 import { ComfortDot } from './ComfortRating'
 import { ActivityHeatmap } from './Heatmap'
@@ -121,7 +121,7 @@ export function Analytics({ problems }: Props) {
                   <YAxis type="category" dataKey="pattern" tick={{ fontSize: 11, fill: '#888' }} width={120} />
                   <Tooltip
                     contentStyle={tooltipStyle}
-                    formatter={(v: number) => [v.toFixed(1), 'Avg comfort']}
+                    formatter={(v) => [Number(v).toFixed(1), 'Avg comfort']}
                   />
                   <Bar dataKey="avg" radius={[0, 3, 3, 0]}>
                     {patternData.map((d, i) => (
@@ -142,7 +142,7 @@ export function Analytics({ problems }: Props) {
               <BarChart data={forecastData} margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
                 <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#888' }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#888' }} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, 'Problems due']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [Number(v), 'Problems due']} />
                 <Bar dataKey="count" fill="#3b82f6" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -162,7 +162,7 @@ export function Analytics({ problems }: Props) {
                 interval={4}
               />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#888' }} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, 'Reviews']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => [Number(v), 'Reviews']} />
               <Line
                 type="monotone"
                 dataKey="count"

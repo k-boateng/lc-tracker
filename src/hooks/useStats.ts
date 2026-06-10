@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { Problem, Pattern } from '../types'
-import { today, daysBetween } from '../utils/dates'
+import { today } from '../utils/dates'
+import { computeStreak } from '../utils/stats'
 
 export function useStats(problems: Problem[]) {
   return useMemo(() => {
@@ -18,23 +19,7 @@ export function useStats(problems: Problem[]) {
     for (const p of problems) {
       for (const r of p.reviews) allDates.add(r.date)
     }
-    let streak = 0
-    const t = today()
-    if (allDates.has(t)) {
-      streak = 1
-      let check = t
-      while (true) {
-        const prev = new Date(check + 'T00:00:00')
-        prev.setDate(prev.getDate() - 1)
-        const prevStr = prev.toISOString().split('T')[0]
-        if (allDates.has(prevStr)) {
-          streak++
-          check = prevStr
-        } else {
-          break
-        }
-      }
-    }
+    const streak = computeStreak(allDates)
 
     // Weakest pattern: pattern with most problems whose last comfort rating < 3
     const patternWeakCount: Partial<Record<Pattern, number>> = {}
