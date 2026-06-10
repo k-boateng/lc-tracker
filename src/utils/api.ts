@@ -205,6 +205,8 @@ export interface LeaderboardEntry {
   avatar_url: string | null
   total_problems: number
   total_reviews: number
+  // null when the deployed RPC predates this column
+  reviews_this_week: number | null
   review_dates: string[]
 }
 
@@ -242,6 +244,7 @@ export async function fetchLeaderboard(groupId: string): Promise<LeaderboardEntr
     ...e,
     total_problems: Number(e.total_problems),
     total_reviews: Number(e.total_reviews),
+    reviews_this_week: e.reviews_this_week != null ? Number(e.reviews_this_week) : null,
     review_dates: e.review_dates ?? [],
   }))
 }

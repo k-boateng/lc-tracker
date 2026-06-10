@@ -101,7 +101,7 @@ export function Analytics({ problems }: Props) {
 
       {/* Heatmap */}
       <section>
-        <div className="text-xs text-secondary uppercase tracking-wider mb-3">Review Activity (last 90 days)</div>
+        <div className="text-xs text-secondary uppercase tracking-wider mb-3">Review Activity (last year)</div>
         <div className="bg-surface border border-border rounded-lg p-4">
           <ActivityHeatmap reviewsByDate={dayCounts} />
         </div>

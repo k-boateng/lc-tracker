@@ -236,13 +236,16 @@ $$;
 
 -- Leaderboard: aggregate stats only — never exposes problem/review contents.
 -- Caller must be a member of the group.
-create or replace function public.get_group_leaderboard(gid uuid)
+-- Drop first: return-type changes are rejected by CREATE OR REPLACE.
+drop function if exists public.get_group_leaderboard(uuid);
+create function public.get_group_leaderboard(gid uuid)
 returns table (
   user_id uuid,
   username text,
   avatar_url text,
   total_problems bigint,
   total_reviews bigint,
+  reviews_this_week bigint,
   review_dates date[]
 )
 language plpgsql
@@ -264,6 +267,7 @@ begin
     p.avatar_url,
     (select count(*) from public.problems pr where pr.user_id = p.id),
     (select count(*) from public.reviews r where r.user_id = p.id),
+    (select count(*) from public.reviews r where r.user_id = p.id and r.date >= current_date - 6),
     coalesce(
       (select array_agg(distinct r.date order by r.date)
        from public.reviews r

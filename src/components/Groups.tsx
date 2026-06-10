@@ -53,7 +53,8 @@ export function Groups() {
           .map(e => ({
             ...e,
             streak: computeStreak(e.review_dates),
-            reviewsThisWeek: countLast7Days(e.review_dates),
+            // Older deployed RPC lacks the column; fall back to counting active days
+            reviewsThisWeek: e.reviews_this_week ?? countLast7Days(e.review_dates),
           }))
           .sort((a, b) =>
             b.reviewsThisWeek - a.reviewsThisWeek ||
