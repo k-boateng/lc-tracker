@@ -30,44 +30,56 @@ const supabase = createClient(
 )
 
 function buildEmail(p: PendingDigest) {
-  const subject = `your ${p.streak_days}-day streak dies tonight`
-  const html = `
-<!doctype html>
-<html><body style="font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;background:#0b0e14;color:#c8d3f5;padding:32px;margin:0;">
-  <div style="max-width:520px;margin:0 auto;background:#0f131b;border:1px solid #1b2233;padding:28px;">
-    <div style="color:#22d3ee;font-weight:700;letter-spacing:-0.02em;font-size:14px;">~/lc-tracker</div>
-    <div style="color:#545c7e;font-size:11px;margin-top:4px;">spaced repetition</div>
+  // Subject deliberately calm — Gmail flags urgency/loss-aversion language
+  const subject = `Keep your ${p.streak_days}-day streak going`
+  // Table-based dark theme — Gmail strips <body> styles. bgcolor attrs and
+  // inline styles on every cell are what actually render.
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"></head><body style="margin:0;padding:0;background:#0b0e14;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0b0e14" style="background:#0b0e14;">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table role="presentation" width="520" cellpadding="0" cellspacing="0" border="0" bgcolor="#0f131b" style="background:#0f131b;border:1px solid #1b2233;max-width:520px;">
+      <tr><td style="padding:28px;font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;">
+        <div style="color:#22d3ee;font-weight:700;letter-spacing:-0.02em;font-size:14px;">~/lc-tracker</div>
+        <div style="color:#545c7e;font-size:11px;margin-top:4px;">spaced repetition</div>
 
-    <div style="margin-top:28px;font-size:16px;color:#c8d3f5;">
-      <span style="color:#22d3ee;">❯</span> hey ${p.username},
-    </div>
+        <div style="margin-top:28px;font-size:16px;color:#c8d3f5;">
+          <span style="color:#22d3ee;">&gt;</span> hey ${p.username},
+        </div>
 
-    <p style="font-size:14px;line-height:1.6;color:#c8d3f5;margin-top:18px;">
-      your <span style="color:#e0af68;font-weight:700;">${p.streak_days}-day streak</span> ends in a few hours unless you review one problem before midnight.
-    </p>
+        <p style="font-size:14px;line-height:1.6;color:#c8d3f5;margin:18px 0 0;">
+          Quick reminder &mdash; you have a <span style="color:#e0af68;font-weight:700;">${p.streak_days}-day streak</span> going. One review today keeps it rolling.
+        </p>
 
-    <p style="font-size:14px;line-height:1.6;color:#545c7e;margin-top:14px;">
-      one review keeps it alive. easy problems still count.
-    </p>
+        <p style="font-size:14px;line-height:1.6;color:#545c7e;margin:14px 0 0;">
+          Easy problems still count. It only takes a few minutes.
+        </p>
 
-    <a href="${APP_URL}" style="display:inline-block;margin-top:22px;padding:10px 20px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.4);color:#22d3ee;text-decoration:none;font-size:13px;">
-      open lc-tracker ↵
-    </a>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:22px;">
+          <tr><td bgcolor="#0b1d24" style="background:#0b1d24;border:1px solid #22d3ee;">
+            <a href="${APP_URL}" style="display:inline-block;padding:10px 22px;color:#22d3ee;text-decoration:none;font-size:13px;font-family:'IBM Plex Mono',ui-monospace,monospace;">
+              Open lc-tracker
+            </a>
+          </td></tr>
+        </table>
 
-    <div style="border-top:1px solid #1b2233;margin-top:32px;padding-top:14px;font-size:11px;color:#545c7e;">
-      no longer want these? <a style="color:#545c7e;" href="${APP_URL}/settings">turn off in settings</a>
-    </div>
-  </div>
+        <div style="border-top:1px solid #1b2233;margin-top:32px;padding-top:14px;font-size:11px;color:#545c7e;">
+          Don't want these? <a style="color:#22d3ee;text-decoration:underline;" href="${APP_URL}/settings">Turn off in settings</a> &middot; <a style="color:#545c7e;text-decoration:underline;" href="${APP_URL}/unsubscribe?u=${p.user_id}">unsubscribe</a>
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
 </body></html>`
-  const text = `hey ${p.username},
+  const text = `Hey ${p.username},
 
-your ${p.streak_days}-day streak ends in a few hours unless you review one problem before midnight.
+You have a ${p.streak_days}-day streak going on lc-tracker. One review today keeps it rolling.
 
-one review keeps it alive. easy problems still count.
+Easy problems still count.
 
-${APP_URL}
+Open lc-tracker: ${APP_URL}
 
-Turn off these emails at ${APP_URL}/settings`
+Don't want these emails? Turn them off at ${APP_URL}/settings
+Unsubscribe: ${APP_URL}/unsubscribe?u=${p.user_id}`
   return { subject, html, text }
 }
 
@@ -82,9 +94,15 @@ async function sendOne(p: PendingDigest): Promise<boolean> {
     body: JSON.stringify({
       from: FROM,
       to: [p.email],
+      reply_to: 'hello@lc-tracker.com',
       subject,
       html,
       text,
+      // Gmail 2024 bulk sender requirements — one-click unsubscribe
+      headers: {
+        'List-Unsubscribe': `<${APP_URL}/unsubscribe?u=${p.user_id}>, <mailto:unsubscribe@lc-tracker.com?subject=unsub-${p.user_id}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
     }),
   })
   if (!res.ok) {
