@@ -66,7 +66,7 @@ export function ProblemLibrary({ problems, onUpdate, onDelete, onReview }: Props
   const selectedProblem = selected ? problems.find(p => p.id === selected.id) ?? null : null
 
   return (
-    <div className="p-6 h-full flex flex-col">
+    <div className="p-4 md:p-6 md:h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-medium text-primary">Problem Library</h2>
         <span className="text-sm text-secondary font-mono">{filtered.length} / {problems.length}</span>
@@ -78,7 +78,7 @@ export function ProblemLibrary({ problems, onUpdate, onDelete, onReview }: Props
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search name or LC#..."
-          className="bg-surface border border-border rounded px-3 py-1.5 text-sm text-primary placeholder:text-secondary/50 focus:outline-none focus:border-accent w-48"
+          className="bg-surface border border-border rounded px-3 py-1.5 text-sm text-primary placeholder:text-secondary/50 focus:outline-none focus:border-accent w-full md:w-48"
         />
         <select
           value={filterPattern}
@@ -130,8 +130,40 @@ export function ProblemLibrary({ problems, onUpdate, onDelete, onReview }: Props
         </select>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-auto border border-border rounded-lg">
+      {/* Mobile: card list */}
+      <div className="md:hidden space-y-2">
+        {filtered.map(p => {
+          const lastComfort = p.comfort_history[p.comfort_history.length - 1]
+          return (
+            <button
+              key={p.id}
+              onClick={() => setSelected(p)}
+              className="w-full text-left bg-surface border border-border px-4 py-3 space-y-2"
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-sm text-primary">{p.name}</span>
+                {p.leetcode_number && (
+                  <span className="font-mono text-xs text-secondary">#{p.leetcode_number}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <PatternTag pattern={p.pattern} />
+                <DifficultyBadge difficulty={p.difficulty} />
+                {lastComfort !== undefined && <ComfortDot comfort={lastComfort} />}
+                <span className="text-secondary ml-auto">{formatRelative(p.next_review)}</span>
+              </div>
+            </button>
+          )
+        })}
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-secondary text-sm border border-border bg-surface">
+            No problems match your filters
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block flex-1 overflow-auto border border-border rounded-lg">
         <table className="w-full text-sm border-collapse">
           <thead className="sticky top-0 bg-surface border-b border-border">
             <tr>

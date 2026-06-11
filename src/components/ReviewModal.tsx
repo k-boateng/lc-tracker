@@ -44,8 +44,8 @@ export function ReviewModal({ problem, onSubmit, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface border border-border rounded-lg w-full max-w-lg p-6 space-y-5">
+    <div className="fixed inset-0 bg-black/70 flex items-stretch md:items-center justify-center z-50 p-0 md:p-4">
+      <div className="bg-surface border border-border rounded-lg w-full md:max-w-lg p-6 space-y-5 overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>

@@ -97,7 +97,7 @@ export function Analytics({ problems }: Props) {
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-4 md:p-6 space-y-8">
       <h2 className="text-base font-medium text-primary">Analytics</h2>
 
       {/* Heatmap */}
@@ -108,7 +108,7 @@ export function Analytics({ problems }: Props) {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Pattern breakdown */}
         <section>
           <div className="text-xs text-secondary uppercase tracking-wider mb-3">Avg Comfort by Pattern</div>

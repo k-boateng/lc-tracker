@@ -13,8 +13,8 @@ export function Login() {
   }, [])
 
   return (
-    <div className="h-screen flex items-center justify-center bg-bg text-primary font-mono">
-      <div className="bg-surface border border-border w-96">
+    <div className="min-h-screen flex items-center justify-center bg-bg text-primary font-mono p-4">
+      <div className="bg-surface border border-border w-full max-w-sm">
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
           <span className="w-2.5 h-2.5 rounded-full bg-danger/60" />
           <span className="w-2.5 h-2.5 rounded-full bg-warning/60" />

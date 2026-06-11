@@ -169,7 +169,7 @@ export function Groups() {
   }
 
   return (
-    <div className="p-6 max-w-3xl space-y-6">
+    <div className="p-4 md:p-6 max-w-3xl space-y-6">
       <h2 className="text-base font-medium text-primary">Groups</h2>
 
       {error && (
@@ -177,7 +177,7 @@ export function Groups() {
       )}
 
       {/* Create / Join */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <form onSubmit={handleCreate} className="bg-surface border border-border rounded-lg p-4 space-y-3">
           <div className="text-xs text-secondary uppercase tracking-wider">Create a group</div>
           <input
@@ -237,7 +237,7 @@ export function Groups() {
       {/* Selected group */}
       {selected ? (
         <section className="bg-surface border border-border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center gap-3">
+          <div className="px-4 py-3 border-b border-border flex items-center gap-3 flex-wrap">
             <div className="flex-1">
               <div className="text-sm text-primary font-medium">{selected.name}</div>
               <div className="text-xs text-secondary mt-0.5">
@@ -281,7 +281,9 @@ export function Groups() {
               disabled={inviteState === 'sending' || !inviteEmail.includes('@')}
               className="px-3 py-1.5 border border-accent/40 bg-accent/5 text-xs text-accent hover:bg-accent/15 transition-colors disabled:opacity-30 flex-shrink-0"
             >
-              {inviteState === 'sending' ? 'sending…' : inviteState === 'sent' ? '✓ sent' : 'send invite'}
+              {inviteState === 'sending' ? 'sending…' : inviteState === 'sent' ? '✓ sent' : (
+                <><span className="md:hidden">send</span><span className="hidden md:inline">send invite</span></>
+              )}
             </button>
           </form>
           {inviteState === 'error' && (
@@ -330,8 +332,8 @@ export function Groups() {
                     <th className="text-left px-3 py-2.5 text-xs text-secondary font-medium">member</th>
                     <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">pts / wk</th>
                     <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">streak</th>
-                    <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">reviews / wk</th>
-                    <th className="text-right px-4 py-2.5 text-xs text-secondary font-medium">solved</th>
+                    <th className="hidden md:table-cell text-right px-3 py-2.5 text-xs text-secondary font-medium">reviews / wk</th>
+                    <th className="hidden md:table-cell text-right px-4 py-2.5 text-xs text-secondary font-medium">solved</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -365,8 +367,8 @@ export function Groups() {
                             {entry.streak === 0 ? '—' : `${entry.streak}d`}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-right text-primary">{entry.reviewsThisWeek}</td>
-                        <td className="px-4 py-2.5 text-right text-primary">{entry.total_problems}</td>
+                        <td className="hidden md:table-cell px-3 py-2.5 text-right text-primary">{entry.reviewsThisWeek}</td>
+                        <td className="hidden md:table-cell px-4 py-2.5 text-right text-primary">{entry.total_problems}</td>
                       </tr>
                     )
                   })}
