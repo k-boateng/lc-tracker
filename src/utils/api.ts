@@ -191,6 +191,30 @@ export async function deleteAllProblems(userId: string): Promise<void> {
   if (error) throw error
 }
 
+// ---- Profile ----
+
+export async function isUsernameTaken(username: string, ownId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username)
+    .neq('id', ownId)
+    .limit(1)
+  if (error) throw error
+  return (data?.length ?? 0) > 0
+}
+
+export async function claimUsername(userId: string, username: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ username, onboarded: true })
+    .eq('id', userId)
+  if (error) {
+    if (error.code === '23505') throw new Error('That handle is taken')
+    throw error
+  }
+}
+
 // ---- Groups ----
 
 export interface GroupInfo {
@@ -205,8 +229,10 @@ export interface LeaderboardEntry {
   avatar_url: string | null
   total_problems: number
   total_reviews: number
-  // null when the deployed RPC predates this column
+  // null when the deployed RPC predates these columns
   reviews_this_week: number | null
+  weekly_points: number | null
+  total_points: number | null
   review_dates: string[]
 }
 
@@ -245,6 +271,8 @@ export async function fetchLeaderboard(groupId: string): Promise<LeaderboardEntr
     total_problems: Number(e.total_problems),
     total_reviews: Number(e.total_reviews),
     reviews_this_week: e.reviews_this_week != null ? Number(e.reviews_this_week) : null,
+    weekly_points: e.weekly_points != null ? Number(e.weekly_points) : null,
+    total_points: e.total_points != null ? Number(e.total_points) : null,
     review_dates: e.review_dates ?? [],
   }))
 }

@@ -58,10 +58,10 @@ export function ActivityHeatmap({ reviewsByDate }: Props) {
 
   const cellColor = (count: number): string => {
     if (count === 0) return 'var(--heatmap-empty)'
-    if (count === 1) return '#1e3a5f'
-    if (count === 2) return '#1d4ed8'
-    if (count <= 4) return '#3b82f6'
-    return '#93c5fd'
+    if (count === 1) return '#155e75'
+    if (count === 2) return '#0e7490'
+    if (count <= 4) return '#22d3ee'
+    return '#a5f3fc'
   }
 
   const gridWidth = 52 * STEP - GAP
@@ -135,7 +135,7 @@ export function ActivityHeatmap({ reviewsByDate }: Props) {
         <span>{totalReviews} reviews in the last year</span>
         <div className="flex items-center gap-1 ml-auto">
           <span>Less</span>
-          {(['var(--heatmap-empty)', '#1e3a5f', '#1d4ed8', '#3b82f6', '#93c5fd'] as const).map((color, i) => (
+          {(['var(--heatmap-empty)', '#155e75', '#0e7490', '#22d3ee', '#a5f3fc'] as const).map((color, i) => (
             <svg key={i} width={CELL} height={CELL}>
               <rect x={0} y={0} width={CELL} height={CELL} rx={2} ry={2} fill={color} />
             </svg>

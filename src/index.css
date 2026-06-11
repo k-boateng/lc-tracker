@@ -2,23 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme colors as RGB channels so Tailwind opacity modifiers work */
 :root {
-  --c-bg: 245 245 245;
-  --c-surface: 255 255 255;
-  --c-border: 220 220 220;
-  --c-primary: 17 24 39;
-  --c-secondary: 107 114 128;
-  --heatmap-empty: #dde1e7;
+  /* Tokyo Night Light — paper terminal */
+  --c-bg: 225 226 231;
+  --c-surface: 239 240 244;
+  --c-border: 197 199 210;
+  --c-primary: 52 59 88;
+  --c-secondary: 110 117 149;
+  --heatmap-empty: #c8cad4;
 }
 
 .dark {
-  --c-bg: 15 15 15;
-  --c-surface: 26 26 26;
-  --c-border: 42 42 42;
-  --c-primary: 240 240 240;
-  --c-secondary: 136 136 136;
-  --heatmap-empty: #262626;
+  /* Night cyan — Tokyo Night derived */
+  --c-bg: 11 14 20;
+  --c-surface: 15 19 27;
+  --c-border: 27 34 51;
+  --c-primary: 200 211 245;
+  --c-secondary: 84 92 126;
+  --heatmap-empty: #141a26;
 }
 
 * {
@@ -27,7 +28,7 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: 'IBM Plex Mono', monospace;
   background-color: rgb(var(--c-bg));
   color: rgb(var(--c-primary));
   -webkit-font-smoothing: antialiased;
@@ -36,4 +37,8 @@ body {
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+::selection {
+  background-color: rgba(34, 211, 238, 0.25);
 }

@@ -23,6 +23,16 @@ export function computeStreak(reviewDates: Iterable<string>): number {
   return streak
 }
 
+// If nothing is reviewed today, how long is the streak that dies at midnight?
+// Returns 0 when there's no streak to lose (or today is already covered).
+export function streakAtRisk(reviewDates: Iterable<string>): number {
+  const dates = reviewDates instanceof Set ? new Set(reviewDates) : new Set(reviewDates)
+  const t = today()
+  if (dates.has(t)) return 0
+  dates.add(t)
+  return computeStreak(dates) - 1
+}
+
 // Count of dates within the last 7 calendar days (inclusive of today)
 export function countLast7Days(reviewDates: string[]): number {
   const cutoff = new Date(today() + 'T00:00:00')

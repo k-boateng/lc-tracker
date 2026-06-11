@@ -7,6 +7,7 @@ export interface Profile {
   id: string
   username: string
   avatar_url: string | null
+  onboarded: boolean
 }
 
 interface AuthState {
@@ -15,6 +16,7 @@ interface AuthState {
   loading: boolean
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -35,18 +37,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe()
   }, [])
 
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url, onboarded')
+      .eq('id', userId)
+      .single()
+    setProfile(data)
+  }
+
   useEffect(() => {
     if (!session) {
       setProfile(null)
       return
     }
-    supabase
-      .from('profiles')
-      .select('id, username, avatar_url')
-      .eq('id', session.user.id)
-      .single()
-      .then(({ data }) => setProfile(data))
+    fetchProfile(session.user.id)
   }, [session])
+
+  const refreshProfile = async () => {
+    if (session) await fetchProfile(session.user.id)
+  }
 
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
@@ -60,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, signInWithGoogle, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

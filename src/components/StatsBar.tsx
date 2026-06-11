@@ -27,7 +27,7 @@ function Stat({ label, value, accent, small }: {
   return (
     <div className="bg-surface px-4 py-3">
       <div className="text-xs text-secondary mb-1">{label}</div>
-      <div className={`font-mono font-medium ${small ? 'text-sm' : 'text-xl'} ${accent ? 'text-accent' : 'text-primary'}`}>
+      <div className={`font-display font-bold ${small ? 'text-sm' : 'text-lg'} ${accent ? 'text-accent' : 'text-primary'}`}>
         {value}
       </div>
     </div>

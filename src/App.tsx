@@ -7,6 +7,7 @@ import { Analytics } from './components/Analytics'
 import { Settings } from './components/Settings'
 import { Groups } from './components/Groups'
 import { Login } from './components/Login'
+import { Onboarding } from './components/Onboarding'
 import { useProblems } from './hooks/useProblems'
 import { useDarkMode } from './hooks/useDarkMode'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -14,7 +15,7 @@ import { getLegacyProblems, clearLegacyProblems } from './utils/storage'
 import type { Problem } from './types'
 
 function AppContent() {
-  const { session, loading: authLoading } = useAuth()
+  const { session, profile, loading: authLoading } = useAuth()
   const {
     problems, loading: dataLoading, error,
     addProblem, updateProblem, deleteProblem, logReview, importProblems,
@@ -66,6 +67,11 @@ function AppContent() {
 
   if (!session) {
     return <Login />
+  }
+
+  // First login: claim a handle before entering the app
+  if (profile && !profile.onboarded) {
+    return <Onboarding />
   }
 
   const legacyCount = getLegacyProblems().length

@@ -9,6 +9,7 @@ import { StatsBar } from './StatsBar'
 import { useStats } from '../hooks/useStats'
 import type { NewProblemData } from '../hooks/useProblems'
 import { isDueToday, isOverdue, daysSince, formatDate } from '../utils/dates'
+import { streakAtRisk } from '../utils/stats'
 
 interface Props {
   problems: Problem[]
@@ -89,6 +90,15 @@ export function Dashboard({ problems, onAddProblem, onLogReview, openQuickLog, o
             weakestPattern={stats.weakestPattern}
           />
 
+          {(() => {
+            const risk = streakAtRisk(problems.flatMap(p => p.reviews.map(r => r.date)))
+            return risk > 0 ? (
+              <div className="border border-warning/40 bg-warning/10 text-warning text-xs px-4 py-2.5">
+                ❯ your {risk}d streak dies at midnight — review one problem to keep it alive
+              </div>
+            ) : null
+          })()}
+
           {dueProblems.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-12 bg-surface border border-border rounded-lg">
               <div className="text-2xl mb-2">✓</div>
@@ -138,9 +148,9 @@ export function Dashboard({ problems, onAddProblem, onLogReview, openQuickLog, o
                     </div>
                     <button
                       onClick={() => setReviewTarget(p)}
-                      className="flex-shrink-0 px-3 py-1.5 rounded bg-accent/15 border border-accent/30 text-accent text-sm hover:bg-accent/25 transition-colors"
+                      className="flex-shrink-0 px-3 py-1.5 bg-accent/10 border border-accent/40 text-accent text-sm hover:bg-accent/20 transition-colors"
                     >
-                      Review
+                      review ↵
                     </button>
                   </div>
                 )

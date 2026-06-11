@@ -13,6 +13,9 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+-- False until the user picks their own handle on first login
+alter table public.profiles add column if not exists onboarded boolean not null default false;
+
 create table if not exists public.problems (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -236,6 +239,11 @@ $$;
 
 -- Leaderboard: aggregate stats only — never exposes problem/review contents.
 -- Caller must be a member of the group.
+--
+-- Points: each problem scores at most once per day (anti-gaming) at
+-- Easy 10 / Medium 20 / Hard 30, plus a +5 consistency bonus per active day.
+-- weekly_points covers the last 7 calendar days and ranks the board.
+--
 -- Drop first: return-type changes are rejected by CREATE OR REPLACE.
 drop function if exists public.get_group_leaderboard(uuid);
 create function public.get_group_leaderboard(gid uuid)
@@ -246,6 +254,8 @@ returns table (
   total_problems bigint,
   total_reviews bigint,
   reviews_this_week bigint,
+  weekly_points bigint,
+  total_points bigint,
   review_dates date[]
 )
 language plpgsql
@@ -268,6 +278,22 @@ begin
     (select count(*) from public.problems pr where pr.user_id = p.id),
     (select count(*) from public.reviews r where r.user_id = p.id),
     (select count(*) from public.reviews r where r.user_id = p.id and r.date >= current_date - 6),
+    (select coalesce(sum(x.pts), 0)::bigint + 5 * count(distinct x.date)
+     from (
+       select distinct r.problem_id, r.date,
+         case pr.difficulty when 'Easy' then 10 when 'Medium' then 20 else 30 end as pts
+       from public.reviews r
+       join public.problems pr on pr.id = r.problem_id
+       where r.user_id = p.id and r.date >= current_date - 6
+     ) x),
+    (select coalesce(sum(x.pts), 0)::bigint + 5 * count(distinct x.date)
+     from (
+       select distinct r.problem_id, r.date,
+         case pr.difficulty when 'Easy' then 10 when 'Medium' then 20 else 30 end as pts
+       from public.reviews r
+       join public.problems pr on pr.id = r.problem_id
+       where r.user_id = p.id
+     ) x),
     coalesce(
       (select array_agg(distinct r.date order by r.date)
        from public.reviews r

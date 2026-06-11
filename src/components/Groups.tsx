@@ -9,6 +9,7 @@ import { computeStreak, countLast7Days } from '../utils/stats'
 interface RankedEntry extends LeaderboardEntry {
   streak: number
   reviewsThisWeek: number
+  points: number
 }
 
 export function Groups() {
@@ -53,11 +54,12 @@ export function Groups() {
           .map(e => ({
             ...e,
             streak: computeStreak(e.review_dates),
-            // Older deployed RPC lacks the column; fall back to counting active days
+            // Older deployed RPC lacks these columns; fall back gracefully
             reviewsThisWeek: e.reviews_this_week ?? countLast7Days(e.review_dates),
+            points: e.weekly_points ?? 0,
           }))
           .sort((a, b) =>
-            b.reviewsThisWeek - a.reviewsThisWeek ||
+            b.points - a.points ||
             b.streak - a.streak ||
             b.total_reviews - a.total_reviews
           )
@@ -226,55 +228,81 @@ export function Groups() {
           </div>
 
           {boardLoading ? (
-            <div className="text-sm text-secondary text-center py-8">Loading leaderboard…</div>
+            <div className="text-sm text-secondary text-center py-8">loading leaderboard…</div>
           ) : (
-            <table className="w-full text-sm border-collapse">
-              <thead className="border-b border-border">
-                <tr>
-                  <th className="text-left px-4 py-2.5 text-xs text-secondary font-medium w-10">#</th>
-                  <th className="text-left px-3 py-2.5 text-xs text-secondary font-medium">Member</th>
-                  <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">Reviews this week</th>
-                  <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">Streak</th>
-                  <th className="text-right px-4 py-2.5 text-xs text-secondary font-medium">Problems</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboard.map((entry, i) => {
-                  const isMe = entry.user_id === userId
+            <>
+              {(() => {
+                const meIdx = leaderboard.findIndex(e => e.user_id === userId)
+                if (meIdx === -1 || leaderboard.length < 2) return null
+                const me = leaderboard[meIdx]
+                if (meIdx === 0) {
+                  const gap = me.points - leaderboard[1].points
                   return (
-                    <tr
-                      key={entry.user_id}
-                      className={`border-b border-border last:border-b-0 ${isMe ? 'bg-accent/5' : ''}`}
-                    >
-                      <td className="px-4 py-2.5 font-mono text-secondary">
-                        {i === 0 && entry.reviewsThisWeek > 0 ? '🏆' : i + 1}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-2">
-                          {entry.avatar_url ? (
-                            <img src={entry.avatar_url} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
-                          ) : (
-                            <div className="w-5 h-5 rounded-full bg-accent/20 text-accent flex items-center justify-center text-[10px] font-mono">
-                              {entry.username[0]?.toUpperCase()}
-                            </div>
-                          )}
-                          <span className={`font-mono text-xs ${isMe ? 'text-accent' : 'text-primary'}`}>
-                            {entry.username}{isMe ? ' (you)' : ''}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5 text-right font-mono text-primary">{entry.reviewsThisWeek}</td>
-                      <td className="px-3 py-2.5 text-right font-mono">
-                        <span className={entry.streak > 2 ? 'text-accent' : 'text-primary'}>
-                          {entry.streak === 0 ? '—' : `${entry.streak}d`}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-primary">{entry.total_problems}</td>
-                    </tr>
+                    <div className="px-4 py-2 border-b border-border text-xs text-success">
+                      ❯ you're leading — {leaderboard[1].username} is {gap} pts behind
+                    </div>
                   )
-                })}
-              </tbody>
-            </table>
+                }
+                const above = leaderboard[meIdx - 1]
+                return (
+                  <div className="px-4 py-2 border-b border-border text-xs text-warning">
+                    ❯ {above.points - me.points} pts behind {above.username} — review to close the gap
+                  </div>
+                )
+              })()}
+              <table className="w-full text-sm border-collapse">
+                <thead className="border-b border-border">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 text-xs text-secondary font-medium w-10">#</th>
+                    <th className="text-left px-3 py-2.5 text-xs text-secondary font-medium">member</th>
+                    <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">pts / wk</th>
+                    <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">streak</th>
+                    <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">reviews / wk</th>
+                    <th className="text-right px-4 py-2.5 text-xs text-secondary font-medium">solved</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((entry, i) => {
+                    const isMe = entry.user_id === userId
+                    return (
+                      <tr
+                        key={entry.user_id}
+                        className={`border-b border-border last:border-b-0 ${isMe ? 'bg-accent/5' : ''}`}
+                      >
+                        <td className={`px-4 py-2.5 font-display text-xs ${i === 0 && entry.points > 0 ? 'text-warning font-bold' : 'text-secondary'}`}>
+                          {i + 1}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            {entry.avatar_url ? (
+                              <img src={entry.avatar_url} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-accent/20 text-accent flex items-center justify-center text-[10px]">
+                                {entry.username[0]?.toUpperCase()}
+                              </div>
+                            )}
+                            <span className={`text-xs ${isMe ? 'text-accent' : 'text-primary'}`}>
+                              {entry.username}{isMe ? ' (you)' : ''}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-display font-bold text-accent">{entry.points}</td>
+                        <td className="px-3 py-2.5 text-right">
+                          <span className={entry.streak > 2 ? 'text-warning' : 'text-primary'}>
+                            {entry.streak === 0 ? '—' : `${entry.streak}d`}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-primary">{entry.reviewsThisWeek}</td>
+                        <td className="px-4 py-2.5 text-right text-primary">{entry.total_problems}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              <div className="px-4 py-2 border-t border-border text-xs text-secondary/70">
+                pts: easy 10 · medium 20 · hard 30 — each problem scores once per day, +5 per active day
+              </div>
+            </>
           )}
         </section>
       ) : (

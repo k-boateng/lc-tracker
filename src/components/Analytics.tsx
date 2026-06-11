@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+﻿import { useMemo } from 'react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell,
@@ -80,19 +80,20 @@ export function Analytics({ problems }: Props) {
   }, [problems])
 
   const comfortColor = (avg: number) => {
-    if (avg < 2) return '#ef4444'
-    if (avg < 3) return '#f97316'
-    if (avg < 4) return '#f59e0b'
-    if (avg < 4.5) return '#84cc16'
-    return '#22c55e'
+    if (avg < 2) return '#f7768e'
+    if (avg < 3) return '#ff9e64'
+    if (avg < 4) return '#e0af68'
+    if (avg < 4.5) return '#9ece6a'
+    return '#73daca'
   }
 
   const tooltipStyle = {
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #2a2a2a',
-    borderRadius: '6px',
-    color: '#f0f0f0',
+    backgroundColor: 'rgb(var(--c-surface))',
+    border: '1px solid rgb(var(--c-border))',
+    borderRadius: '0',
+    color: 'rgb(var(--c-primary))',
     fontSize: '12px',
+    fontFamily: 'IBM Plex Mono, monospace',
   }
 
   return (
@@ -117,8 +118,8 @@ export function Analytics({ problems }: Props) {
             ) : (
               <ResponsiveContainer width="100%" height={Math.max(200, patternData.length * 28)}>
                 <BarChart data={patternData} layout="vertical" margin={{ left: 120, right: 16, top: 4, bottom: 4 }}>
-                  <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 11, fill: '#888' }} />
-                  <YAxis type="category" dataKey="pattern" tick={{ fontSize: 11, fill: '#888' }} width={120} />
+                  <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 11, fill: '#545c7e' }} />
+                  <YAxis type="category" dataKey="pattern" tick={{ fontSize: 11, fill: '#545c7e' }} width={120} />
                   <Tooltip
                     contentStyle={tooltipStyle}
                     formatter={(v) => [Number(v).toFixed(1), 'Avg comfort']}
@@ -140,10 +141,10 @@ export function Analytics({ problems }: Props) {
           <div className="bg-surface border border-border rounded-lg p-4">
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={forecastData} margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#888' }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#888' }} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#545c7e' }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#545c7e' }} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v) => [Number(v), 'Problems due']} />
-                <Bar dataKey="count" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="count" fill="#22d3ee" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -158,15 +159,15 @@ export function Analytics({ problems }: Props) {
             <LineChart data={volumeData} margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 10, fill: '#888' }}
+                tick={{ fontSize: 10, fill: '#545c7e' }}
                 interval={4}
               />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#888' }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#545c7e' }} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v) => [Number(v), 'Reviews']} />
               <Line
                 type="monotone"
                 dataKey="count"
-                stroke="#3b82f6"
+                stroke="#22d3ee"
                 strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
