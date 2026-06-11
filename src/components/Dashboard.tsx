@@ -257,6 +257,7 @@ export function Dashboard({ problems, onAddProblem, onLogReview, openQuickLog, o
             <div>
               <label className="text-xs text-secondary block mb-1">Initial comfort</label>
               <ComfortRating
+                compact
                 value={form.initialComfort}
                 onChange={v => setForm(f => ({ ...f, initialComfort: v }))}
               />
