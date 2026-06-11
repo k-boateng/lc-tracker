@@ -2,8 +2,8 @@ import { useAuth } from '../contexts/AuthContext'
 
 const mockBoard = [
   { rank: 1, name: 'dan', pts: 240, streak: '12d', you: false },
-  { rank: 2, name: 'kwame', pts: 220, streak: '9d', you: true },
-  { rank: 3, name: 'ama', pts: 165, streak: '4d', you: false },
+  { rank: 2, name: 'alex', pts: 220, streak: '9d', you: true },
+  { rank: 3, name: 'sam', pts: 165, streak: '4d', you: false },
   { rank: 4, name: 'jordan', pts: 90, streak: '—', you: false },
 ]
 
