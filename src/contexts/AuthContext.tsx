@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
+const url = import.meta.env.VITE_SUPABASE_URL as string
+
 export interface Profile {
   id: string
   username: string
@@ -28,9 +30,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // OAuth redirect lands here with #access_token=...&refresh_token=...
-    // We parse it manually (Supabase JS 2.108's detectSessionInUrl path
-    // throws "non ISO-8859-1 code point" in its internal user-fetch).
-    const consumeHashSession = async () => {
+    // Supabase JS 2.108 has a bug where setSession() / detectSessionInUrl
+    // call _getUser internally and fetch fails with "non ISO-8859-1 code
+    // point" in the headers. We bypass that entirely: decode the JWT, write
+    // the session straight to localStorage, then reload so the client picks
+    // it up as a stored session (no network validation needed on load).
+    const consumeHashSession = (): boolean => {
       const hash = window.location.hash.startsWith('#')
         ? window.location.hash.slice(1)
         : ''
@@ -38,21 +43,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const params = new URLSearchParams(hash)
       const access_token = params.get('access_token')
       const refresh_token = params.get('refresh_token')
+      const expires_in = parseInt(params.get('expires_in') ?? '3600', 10)
+      const token_type = params.get('token_type') ?? 'bearer'
       if (!access_token || !refresh_token) return false
-      const { data, error } = await supabase.auth.setSession({ access_token, refresh_token })
-      if (error || !data.session) return false
-      // Clear the tokens from the URL bar
-      window.history.replaceState(null, '', window.location.pathname + window.location.search)
-      setSession(data.session)
+
+      let payload: any = {}
+      try {
+        const b64 = access_token.split('.')[1]
+          .replace(/-/g, '+').replace(/_/g, '/')
+        const padded = b64 + '='.repeat((4 - b64.length % 4) % 4)
+        payload = JSON.parse(decodeURIComponent(escape(atob(padded))))
+      } catch {
+        return false
+      }
+
+      const expires_at = Math.floor(Date.now() / 1000) + expires_in
+      const supaSession = {
+        access_token,
+        refresh_token,
+        expires_in,
+        expires_at,
+        token_type,
+        user: {
+          id: payload.sub,
+          aud: payload.aud ?? 'authenticated',
+          role: payload.role ?? 'authenticated',
+          email: payload.email,
+          email_confirmed_at: payload.email_verified ? new Date().toISOString() : null,
+          phone: payload.phone ?? '',
+          confirmed_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          app_metadata: payload.app_metadata ?? { provider: 'google', providers: ['google'] },
+          user_metadata: payload.user_metadata ?? {},
+          identities: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_anonymous: false,
+        },
+      }
+
+      const ref = url.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1]
+      if (!ref) return false
+      const storageKey = `sb-${ref}-auth-token`
+      localStorage.setItem(storageKey, JSON.stringify(supaSession))
+
+      // Strip the hash and reload — initializer will read from storage.
+      window.location.replace(window.location.pathname + window.location.search)
       return true
     }
 
     const init = async () => {
-      const consumed = await consumeHashSession()
-      if (!consumed) {
-        const { data } = await supabase.auth.getSession()
-        setSession(data.session)
-      }
+      if (consumeHashSession()) return // reload in progress
+      const { data } = await supabase.auth.getSession()
+      setSession(data.session)
       setLoading(false)
     }
     init()
