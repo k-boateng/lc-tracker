@@ -357,7 +357,7 @@ begin
         from (
           select r.date,
             r.date - (row_number() over (order by r.date))::int * interval '1 day' as grp
-          from (select distinct date from public.reviews where user_id = a.id) r
+          from (select distinct rr.date from public.reviews rr where rr.user_id = a.id) r
         ) g
         where g.date <= a.last_review_date
         group by g.grp
