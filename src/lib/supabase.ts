@@ -11,10 +11,9 @@ if (!url || !anonKey) {
 
 export const supabase = createClient(url, anonKey, {
   auth: {
-    // Google OAuth returns tokens in the URL hash (#access_token=...);
-    // implicit flow makes the client read and store them on app load.
     flowType: 'implicit',
-    detectSessionInUrl: true,
+    // Auto-detection has a buggy fetch path in 2.108; we do it manually in AuthContext
+    detectSessionInUrl: false,
     persistSession: true,
     autoRefreshToken: true,
   },
