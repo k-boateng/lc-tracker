@@ -7,6 +7,7 @@ import { Analytics } from './components/Analytics'
 import { Settings } from './components/Settings'
 import { Groups } from './components/Groups'
 import { Login } from './components/Login'
+import { Landing } from './components/Landing'
 import { Onboarding } from './components/Onboarding'
 import { useProblems } from './hooks/useProblems'
 import { useDarkMode } from './hooks/useDarkMode'
@@ -97,7 +98,9 @@ function AppContent() {
   }
 
   if (!session) {
-    return <Login />
+    // Invited users skip the marketing page — straight to login with the
+    // "you've been invited" banner. Everyone else gets the landing page.
+    return getPendingInvite() ? <Login /> : <Landing />
   }
 
   // First login: claim a handle before entering the app
