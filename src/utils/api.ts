@@ -284,7 +284,19 @@ export async function sendInvite(groupId: string, email: string): Promise<void> 
   const { data, error } = await supabase.functions.invoke('send-invite', {
     body: { group_id: groupId, email },
   })
-  if (error) throw new Error('Failed to send invite')
+  if (error) {
+    // FunctionsHttpError carries the response; surface the real message
+    let msg = 'Failed to send invite'
+    try {
+      const ctx = (error as any).context
+      if (ctx?.json) {
+        const body = await ctx.json()
+        if (body?.error) msg = body.error
+        else if (body?.message) msg = body.message
+      }
+    } catch { /* keep generic */ }
+    throw new Error(msg)
+  }
   if (data?.error) throw new Error(data.error)
 }
 
