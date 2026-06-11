@@ -250,6 +250,7 @@ export interface LeaderboardEntry {
   // null when the deployed RPC predates these columns
   reviews_this_week: number | null
   weekly_points: number | null
+  prev_week_points: number | null
   total_points: number | null
   review_dates: string[]
 }
@@ -290,6 +291,7 @@ export async function fetchLeaderboard(groupId: string): Promise<LeaderboardEntr
     total_reviews: Number(e.total_reviews),
     reviews_this_week: e.reviews_this_week != null ? Number(e.reviews_this_week) : null,
     weekly_points: e.weekly_points != null ? Number(e.weekly_points) : null,
+    prev_week_points: e.prev_week_points != null ? Number(e.prev_week_points) : null,
     total_points: e.total_points != null ? Number(e.total_points) : null,
     review_dates: e.review_dates ?? [],
   }))

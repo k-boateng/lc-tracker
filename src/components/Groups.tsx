@@ -4,7 +4,17 @@ import {
   fetchMyGroups, createGroup, joinGroup, leaveGroup, fetchLeaderboard,
 } from '../utils/api'
 import type { GroupInfo, LeaderboardEntry } from '../utils/api'
-import { computeStreak, countLast7Days } from '../utils/stats'
+import { computeStreak, countThisWeek, nextResetUTC } from '../utils/stats'
+
+function formatCountdown(target: Date, now: number): string {
+  let secs = Math.max(0, Math.floor((target.getTime() - now) / 1000))
+  const d = Math.floor(secs / 86400); secs -= d * 86400
+  const h = Math.floor(secs / 3600); secs -= h * 3600
+  const m = Math.floor(secs / 60)
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
 
 interface RankedEntry extends LeaderboardEntry {
   streak: number
@@ -26,6 +36,13 @@ export function Groups() {
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
+
+  // Tick every 30s so the round countdown stays current
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(t)
+  }, [])
 
   const loadGroups = useCallback(async () => {
     try {
@@ -55,7 +72,7 @@ export function Groups() {
             ...e,
             streak: computeStreak(e.review_dates),
             // Older deployed RPC lacks these columns; fall back gracefully
-            reviewsThisWeek: e.reviews_this_week ?? countLast7Days(e.review_dates),
+            reviewsThisWeek: e.reviews_this_week ?? countThisWeek(e.review_dates),
             points: e.weekly_points ?? 0,
           }))
           .sort((a, b) =>
@@ -205,6 +222,8 @@ export function Groups() {
               <div className="text-sm text-primary font-medium">{selected.name}</div>
               <div className="text-xs text-secondary mt-0.5">
                 {leaderboard.length} member{leaderboard.length !== 1 ? 's' : ''}
+                {' · '}
+                <span className="text-warning">round resets in {formatCountdown(nextResetUTC(), now)}</span>
               </div>
             </div>
             <button
@@ -231,6 +250,18 @@ export function Groups() {
             <div className="text-sm text-secondary text-center py-8">loading leaderboard…</div>
           ) : (
             <>
+              {(() => {
+                const top = [...leaderboard].sort(
+                  (a, b) => (b.prev_week_points ?? 0) - (a.prev_week_points ?? 0)
+                )[0]
+                if (!top || !top.prev_week_points) return null
+                return (
+                  <div className="px-4 py-2 border-b border-border text-xs text-secondary">
+                    last week's winner: <span className="text-accent">{top.username}</span>
+                    {' — '}<span className="font-display font-bold text-warning">{top.prev_week_points}</span> pts
+                  </div>
+                )
+              })()}
               {(() => {
                 const meIdx = leaderboard.findIndex(e => e.user_id === userId)
                 if (meIdx === -1 || leaderboard.length < 2) return null
@@ -300,7 +331,7 @@ export function Groups() {
                 </tbody>
               </table>
               <div className="px-4 py-2 border-t border-border text-xs text-secondary/70">
-                pts: easy 10 · medium 20 · hard 30 — each problem scores once per day, +5 per active day
+                weekly round · resets monday 00:00 utc · easy 10 / medium 20 / hard 30 · each problem scores once per day · +5 per active day
               </div>
             </>
           )}

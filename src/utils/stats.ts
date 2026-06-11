@@ -33,10 +33,26 @@ export function streakAtRisk(reviewDates: Iterable<string>): number {
   return computeStreak(dates) - 1
 }
 
-// Count of dates within the last 7 calendar days (inclusive of today)
-export function countLast7Days(reviewDates: string[]): number {
-  const cutoff = new Date(today() + 'T00:00:00')
-  cutoff.setDate(cutoff.getDate() - 6)
-  const cutoffStr = cutoff.toISOString().split('T')[0]
-  return reviewDates.filter(d => d >= cutoffStr).length
+// Monday 00:00 UTC of the current week, as an ISO date string.
+// Matches Postgres date_trunc('week', now() at time zone 'utc').
+export function weekStartUTC(): string {
+  const now = new Date()
+  const dow = now.getUTCDay() // 0 Sun .. 6 Sat
+  const sinceMonday = (dow + 6) % 7
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - sinceMonday))
+  return monday.toISOString().split('T')[0]
+}
+
+// Next Monday 00:00 UTC — when the weekly round resets.
+export function nextResetUTC(): Date {
+  const now = new Date()
+  const dow = now.getUTCDay()
+  const daysUntilMonday = ((8 - dow) % 7) || 7
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysUntilMonday))
+}
+
+// Count of review dates inside the current weekly round
+export function countThisWeek(reviewDates: string[]): number {
+  const start = weekStartUTC()
+  return reviewDates.filter(d => d >= start).length
 }
