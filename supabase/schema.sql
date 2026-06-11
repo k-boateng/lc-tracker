@@ -16,6 +16,11 @@ create table if not exists public.profiles (
 -- False until the user picks their own handle on first login
 alter table public.profiles add column if not exists onboarded boolean not null default false;
 
+-- Email digest preferences: opt-in by default, last-sent tracking prevents
+-- duplicate sends from the cron job
+alter table public.profiles add column if not exists email_digest_enabled boolean not null default true;
+alter table public.profiles add column if not exists last_digest_sent_at timestamptz;
+
 create table if not exists public.problems (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -133,14 +138,16 @@ alter table public.groups enable row level security;
 alter table public.group_members enable row level security;
 
 -- profiles: anyone authenticated can read usernames/avatars (needed for member lists);
--- only the owner can update their own row
+-- only the owner can update their own row. Sensitive columns (email_digest_*)
+-- aren't returned by our existing select queries which name specific cols.
 drop policy if exists "profiles_select" on public.profiles;
 create policy "profiles_select" on public.profiles
   for select to authenticated using (true);
 
 drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles
-  for update to authenticated using (id = auth.uid());
+  for update to authenticated using (id = auth.uid())
+  with check (id = auth.uid());
 
 -- problems: owner-only, all operations
 drop policy if exists "problems_owner_all" on public.problems;
@@ -304,4 +311,75 @@ begin
   join public.profiles p on p.id = gm.user_id
   where gm.group_id = gid;
 end;
+$$;
+
+-- ============================================================
+-- EMAIL DIGEST
+-- ============================================================
+
+-- Find users who should get a "your streak dies tonight" email right now.
+-- Run hourly by pg_cron; the function picks only people whose local 8pm
+-- has rolled around in the past hour, who have an at-risk streak, who
+-- haven't reviewed today, and who haven't already been emailed today.
+-- The Edge Function calls this, sends, then writes last_digest_sent_at.
+drop function if exists public.list_pending_digests();
+create function public.list_pending_digests()
+returns table (
+  user_id uuid,
+  email text,
+  username text,
+  streak_days int
+)
+language plpgsql
+security definer set search_path = public
+stable
+as $$
+begin
+  return query
+  with active as (
+    select p.id, p.username, u.email,
+      coalesce(
+        (select max(r.date) from public.reviews r where r.user_id = p.id),
+        '1970-01-01'::date
+      ) as last_review_date
+    from public.profiles p
+    join auth.users u on u.id = p.id
+    where p.email_digest_enabled = true
+      and u.email is not null
+      and (p.last_digest_sent_at is null or p.last_digest_sent_at < current_date)
+  ),
+  streaked as (
+    select a.*,
+      -- Streak length ending at last_review_date (≥1 means there's something to lose today)
+      (
+        select count(*)::int
+        from (
+          select r.date,
+            r.date - (row_number() over (order by r.date))::int * interval '1 day' as grp
+          from (select distinct date from public.reviews where user_id = a.id) r
+        ) g
+        where g.date <= a.last_review_date
+        group by g.grp
+        order by max(g.date) desc
+        limit 1
+      ) as streak
+    from active a
+  )
+  select s.id, s.email, s.username, coalesce(s.streak, 0)
+  from streaked s
+  where s.last_review_date = current_date - 1   -- last reviewed yesterday
+    and coalesce(s.streak, 0) >= 1               -- has a streak worth saving
+    and extract(hour from now() at time zone 'UTC') = 20;  -- 8pm UTC (~3-4pm ET)
+end;
+$$;
+
+-- Marks a user's digest as sent so the cron doesn't double-fire today.
+-- Only the Edge Function (with service_role key) should call this.
+drop function if exists public.mark_digest_sent(uuid);
+create function public.mark_digest_sent(uid uuid)
+returns void
+language sql
+security definer set search_path = public
+as $$
+  update public.profiles set last_digest_sent_at = now() where id = uid;
 $$;

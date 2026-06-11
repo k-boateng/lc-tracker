@@ -215,6 +215,24 @@ export async function claimUsername(userId: string, username: string): Promise<v
   }
 }
 
+export async function getEmailDigestEnabled(userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('email_digest_enabled')
+    .eq('id', userId)
+    .single()
+  if (error) return true // default on
+  return data?.email_digest_enabled ?? true
+}
+
+export async function setEmailDigestEnabled(userId: string, enabled: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ email_digest_enabled: enabled })
+    .eq('id', userId)
+  if (error) throw error
+}
+
 // ---- Groups ----
 
 export interface GroupInfo {
