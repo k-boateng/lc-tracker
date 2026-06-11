@@ -209,8 +209,8 @@ export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
         <div className="text-xs text-secondary uppercase tracking-wider">Notifications</div>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-primary">Streak-at-risk email</div>
-            <div className="text-xs text-secondary mt-0.5">When your streak might die tonight, we'll email a reminder.</div>
+            <div className="text-sm text-primary">Daily nudge email</div>
+            <div className="text-xs text-secondary mt-0.5">One email a day, max — streak at risk, rank changes, invite updates.</div>
           </div>
           <button
             onClick={toggleDigest}
