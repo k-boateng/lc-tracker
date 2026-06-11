@@ -17,17 +17,25 @@ import { joinGroup } from './utils/api'
 import type { Problem } from './types'
 
 const PENDING_INVITE_KEY = 'lc_tracker_pending_invite'
+const PENDING_INVITE_ID_KEY = 'lc_tracker_pending_invite_id'
 
-// Capture /join/<code> from an invite link before anything renders, so the
-// code survives the OAuth redirect round-trip.
+// Capture /join/<code>?i=<invite-id> from an invite link before anything
+// renders, so both survive the OAuth redirect round-trip. The i param
+// attributes the conversion to whoever sent the email.
 const joinMatch = window.location.pathname.match(/^\/join\/([a-zA-Z0-9]{4,12})$/)
 if (joinMatch) {
   localStorage.setItem(PENDING_INVITE_KEY, joinMatch[1].toUpperCase())
+  const inviteId = new URLSearchParams(window.location.search).get('i')
+  if (inviteId) localStorage.setItem(PENDING_INVITE_ID_KEY, inviteId)
   window.history.replaceState(null, '', '/')
 }
 
 export function getPendingInvite(): string | null {
   return localStorage.getItem(PENDING_INVITE_KEY)
+}
+
+export function getPendingInviteId(): string | null {
+  return localStorage.getItem(PENDING_INVITE_ID_KEY)
 }
 
 function AppContent() {
@@ -65,8 +73,10 @@ function AppContent() {
   useEffect(() => {
     const code = getPendingInvite()
     if (!session || !profile || !code) return
+    const inviteId = getPendingInviteId()
     localStorage.removeItem(PENDING_INVITE_KEY)
-    joinGroup(code)
+    localStorage.removeItem(PENDING_INVITE_ID_KEY)
+    joinGroup(code, inviteId ?? undefined)
       .then(() => {
         if (profile.onboarded) window.location.replace('/groups')
       })

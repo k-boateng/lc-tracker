@@ -30,8 +30,8 @@ function json(body: unknown, status = 200) {
   })
 }
 
-function buildInviteEmail(inviter: string, groupName: string, code: string) {
-  const link = `${APP_URL}/join/${code}`
+function buildInviteEmail(inviter: string, groupName: string, code: string, inviteId: string) {
+  const link = `${APP_URL}/join/${code}?i=${inviteId}`
   const subject = `${inviter} invited you to grind LeetCode together`
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"></head><body style="margin:0;padding:0;background:#0b0e14;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0b0e14" style="background:#0b0e14;">
@@ -113,7 +113,18 @@ Deno.serve(async (req) => {
   ])
   if (!group || !profile) return json({ error: 'group not found' }, 404)
 
-  const { subject, html, text } = buildInviteEmail(profile.username, group.name, group.invite_code)
+  // Record the invite so the conversion can be attributed on join
+  const { data: inviteRow, error: inviteError } = await admin
+    .from('invites')
+    .insert({ group_id: groupId, inviter_id: callerId, email })
+    .select('id')
+    .single()
+  if (inviteError || !inviteRow) {
+    console.error('invite insert failed', inviteError)
+    return json({ error: 'could not record invite' }, 500)
+  }
+
+  const { subject, html, text } = buildInviteEmail(profile.username, group.name, group.invite_code, inviteRow.id)
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {

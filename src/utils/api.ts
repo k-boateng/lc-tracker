@@ -267,10 +267,32 @@ export async function createGroup(name: string): Promise<GroupInfo> {
   return (Array.isArray(data) ? data[0] : data) as GroupInfo
 }
 
-export async function joinGroup(code: string): Promise<string> {
-  const { data, error } = await supabase.rpc('join_group', { code })
+export async function joinGroup(code: string, inviteId?: string): Promise<string> {
+  const { data, error } = await supabase.rpc('join_group', {
+    code,
+    invite: inviteId ?? null,
+  })
   if (error) throw error
   return data as string
+}
+
+export interface InviteRecord {
+  id: string
+  email: string
+  sent_at: string
+  joined_user_id: string | null
+  joined_at: string | null
+}
+
+// Invites the current user has sent for a group (RLS scopes to own rows)
+export async function fetchMyInvites(groupId: string): Promise<InviteRecord[]> {
+  const { data, error } = await supabase
+    .from('invites')
+    .select('id, email, sent_at, joined_user_id, joined_at')
+    .eq('group_id', groupId)
+    .order('sent_at', { ascending: false })
+  if (error) return []
+  return data as InviteRecord[]
 }
 
 // Group name for an invite code — works before login (login page banner)

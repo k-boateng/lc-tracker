@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  fetchMyGroups, createGroup, joinGroup, leaveGroup, fetchLeaderboard, sendInvite,
+  fetchMyGroups, createGroup, joinGroup, leaveGroup, fetchLeaderboard, sendInvite, fetchMyInvites,
 } from '../utils/api'
-import type { GroupInfo, LeaderboardEntry } from '../utils/api'
+import type { GroupInfo, LeaderboardEntry, InviteRecord } from '../utils/api'
 import { computeStreak, countThisWeek, nextResetUTC } from '../utils/stats'
 
 function formatCountdown(target: Date, now: number): string {
@@ -44,6 +44,36 @@ export function Groups() {
     return () => clearInterval(t)
   }, [])
 
+  // Invites I've sent for the selected group
+  const [myInvites, setMyInvites] = useState<InviteRecord[]>([])
+  useEffect(() => {
+    if (!selectedId) {
+      setMyInvites([])
+      return
+    }
+    fetchMyInvites(selectedId).then(setMyInvites)
+  }, [selectedId])
+  const recruitedIds = new Set(myInvites.map(i => i.joined_user_id).filter(Boolean))
+
+  // Share recap: copies current standings + join link to the clipboard
+  const [recapCopied, setRecapCopied] = useState(false)
+  const copyRecap = () => {
+    if (!selected) return
+    const lines = leaderboard.slice(0, 3).map((e, i) => `${i + 1}. ${e.username} ${e.points} pts`)
+    const meIdx = leaderboard.findIndex(e => e.user_id === userId)
+    if (meIdx > 2) {
+      lines.push(`…`, `${meIdx + 1}. ${leaderboard[meIdx].username} ${leaderboard[meIdx].points} pts (me)`)
+    }
+    const champ = [...leaderboard].sort((a, b) => (b.prev_week_points ?? 0) - (a.prev_week_points ?? 0))[0]
+    const champLine = champ?.prev_week_points
+      ? `\nlast week: ${champ.username} won with ${champ.prev_week_points} pts`
+      : ''
+    const text = `~/lc-tracker — ${selected.name}\n${lines.join('\n')}${champLine}\n\nthink you can hang? https://lc-tracker.com/join/${selected.invite_code}`
+    navigator.clipboard.writeText(text)
+    setRecapCopied(true)
+    setTimeout(() => setRecapCopied(false), 2000)
+  }
+
   // Invite by email
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteState, setInviteState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
@@ -57,6 +87,7 @@ export function Groups() {
       await sendInvite(selectedId, inviteEmail.trim())
       setInviteState('sent')
       setInviteEmail('')
+      fetchMyInvites(selectedId).then(setMyInvites)
       setTimeout(() => setInviteState('idle'), 3000)
     } catch (err: any) {
       setInviteError(err.message ?? 'Failed to send')
@@ -247,6 +278,13 @@ export function Groups() {
               </div>
             </div>
             <button
+              onClick={copyRecap}
+              className="px-3 py-1.5 rounded border border-accent/40 bg-accent/5 text-xs text-accent hover:bg-accent/15 transition-colors"
+              title="Copy standings + join link for your group chat"
+            >
+              {recapCopied ? '✓ copied' : 'share ❯'}
+            </button>
+            <button
               onClick={() => copyCode(selected.invite_code)}
               className="px-3 py-1.5 rounded border border-border text-xs text-secondary hover:text-primary hover:border-secondary transition-colors font-mono tracking-widest"
               title="Copy invite code"
@@ -288,6 +326,11 @@ export function Groups() {
           </form>
           {inviteState === 'error' && (
             <div className="px-4 py-2 border-b border-border text-xs text-danger">{inviteError}</div>
+          )}
+          {myInvites.length > 0 && (
+            <div className="px-4 py-2 border-b border-border text-xs text-secondary/70">
+              your invites: {myInvites.length} sent · {myInvites.filter(i => i.joined_user_id).length} joined
+            </div>
           )}
 
           {boardLoading ? (
@@ -359,6 +402,11 @@ export function Groups() {
                             <span className={`text-xs ${isMe ? 'text-accent' : 'text-primary'}`}>
                               {entry.username}{isMe ? ' (you)' : ''}
                             </span>
+                            {recruitedIds.has(entry.user_id) && (
+                              <span className="text-[10px] text-success/70 border border-success/30 px-1 py-0.5 flex-shrink-0">
+                                your invite
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-3 py-2.5 text-right font-display font-bold text-accent">{entry.points}</td>
