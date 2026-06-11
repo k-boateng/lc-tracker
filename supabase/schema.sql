@@ -339,7 +339,7 @@ as $$
 begin
   return query
   with active as (
-    select p.id, p.username, u.email,
+    select p.id, p.username, u.email::text as email,
       coalesce(
         (select max(r.date) from public.reviews r where r.user_id = p.id),
         '1970-01-01'::date
