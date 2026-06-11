@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  fetchMyGroups, createGroup, joinGroup, leaveGroup, fetchLeaderboard,
+  fetchMyGroups, createGroup, joinGroup, leaveGroup, fetchLeaderboard, sendInvite,
 } from '../utils/api'
 import type { GroupInfo, LeaderboardEntry } from '../utils/api'
 import { computeStreak, countThisWeek, nextResetUTC } from '../utils/stats'
@@ -43,6 +43,26 @@ export function Groups() {
     const t = setInterval(() => setNow(Date.now()), 30_000)
     return () => clearInterval(t)
   }, [])
+
+  // Invite by email
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteState, setInviteState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [inviteError, setInviteError] = useState('')
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedId || !inviteEmail.trim() || inviteState === 'sending') return
+    setInviteState('sending')
+    setInviteError('')
+    try {
+      await sendInvite(selectedId, inviteEmail.trim())
+      setInviteState('sent')
+      setInviteEmail('')
+      setTimeout(() => setInviteState('idle'), 3000)
+    } catch (err: any) {
+      setInviteError(err.message ?? 'Failed to send')
+      setInviteState('error')
+    }
+  }
 
   const loadGroups = useCallback(async () => {
     try {
@@ -245,6 +265,28 @@ export function Groups() {
               {confirmLeave ? 'Confirm' : 'Leave'}
             </button>
           </div>
+
+          {/* Invite by email */}
+          <form onSubmit={handleInvite} className="px-4 py-2.5 border-b border-border flex items-center gap-2">
+            <span className="text-xs text-secondary flex-shrink-0">invite ❯</span>
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={e => { setInviteEmail(e.target.value); if (inviteState === 'error') setInviteState('idle') }}
+              placeholder="friend@email.com"
+              className="flex-1 bg-bg border border-border px-2 py-1.5 text-xs text-primary placeholder:text-secondary/40 focus:outline-none focus:border-accent"
+            />
+            <button
+              type="submit"
+              disabled={inviteState === 'sending' || !inviteEmail.includes('@')}
+              className="px-3 py-1.5 border border-accent/40 bg-accent/5 text-xs text-accent hover:bg-accent/15 transition-colors disabled:opacity-30 flex-shrink-0"
+            >
+              {inviteState === 'sending' ? 'sending…' : inviteState === 'sent' ? '✓ sent' : 'send invite'}
+            </button>
+          </form>
+          {inviteState === 'error' && (
+            <div className="px-4 py-2 border-b border-border text-xs text-danger">{inviteError}</div>
+          )}
 
           {boardLoading ? (
             <div className="text-sm text-secondary text-center py-8">loading leaderboard…</div>

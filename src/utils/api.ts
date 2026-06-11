@@ -273,6 +273,21 @@ export async function joinGroup(code: string): Promise<string> {
   return data as string
 }
 
+// Group name for an invite code — works before login (login page banner)
+export async function peekGroup(code: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('peek_group', { code })
+  if (error) return null
+  return (data as string) ?? null
+}
+
+export async function sendInvite(groupId: string, email: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('send-invite', {
+    body: { group_id: groupId, email },
+  })
+  if (error) throw new Error('Failed to send invite')
+  if (data?.error) throw new Error(data.error)
+}
+
 export async function leaveGroup(groupId: string, userId: string): Promise<void> {
   const { error } = await supabase
     .from('group_members')

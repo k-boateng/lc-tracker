@@ -12,7 +12,22 @@ import { useProblems } from './hooks/useProblems'
 import { useDarkMode } from './hooks/useDarkMode'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { getLegacyProblems, clearLegacyProblems } from './utils/storage'
+import { joinGroup } from './utils/api'
 import type { Problem } from './types'
+
+const PENDING_INVITE_KEY = 'lc_tracker_pending_invite'
+
+// Capture /join/<code> from an invite link before anything renders, so the
+// code survives the OAuth redirect round-trip.
+const joinMatch = window.location.pathname.match(/^\/join\/([a-zA-Z0-9]{4,12})$/)
+if (joinMatch) {
+  localStorage.setItem(PENDING_INVITE_KEY, joinMatch[1].toUpperCase())
+  window.history.replaceState(null, '', '/')
+}
+
+export function getPendingInvite(): string | null {
+  return localStorage.getItem(PENDING_INVITE_KEY)
+}
 
 function AppContent() {
   const { session, profile, loading: authLoading } = useAuth()
@@ -42,6 +57,22 @@ function AppContent() {
       setImportBanner('offer')
     }
   }, [session, dataLoading, problems.length])
+
+  // Invite link auto-join: once signed in (profile exists), consume the
+  // pending invite code. Redirect to the leaderboard only after onboarding
+  // so we don't interrupt the handle-claim screen.
+  useEffect(() => {
+    const code = getPendingInvite()
+    if (!session || !profile || !code) return
+    localStorage.removeItem(PENDING_INVITE_KEY)
+    joinGroup(code)
+      .then(() => {
+        if (profile.onboarded) window.location.replace('/groups')
+      })
+      .catch(() => {
+        // bad/expired code — nothing to do, let them in normally
+      })
+  }, [session, profile])
 
   const handleLegacyImport = async () => {
     setImportBanner('importing')
