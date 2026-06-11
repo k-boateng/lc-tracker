@@ -318,10 +318,12 @@ $$;
 -- ============================================================
 
 -- Find users who should get a "your streak dies tonight" email right now.
--- Run hourly by pg_cron; the function picks only people whose local 8pm
--- has rolled around in the past hour, who have an at-risk streak, who
--- haven't reviewed today, and who haven't already been emailed today.
--- The Edge Function calls this, sends, then writes last_digest_sent_at.
+-- Run hourly by pg_cron. The function returns people who:
+--   * have an at-risk streak (last reviewed yesterday, ≥1 day streak)
+--   * have email digests enabled and a confirmed email
+--   * haven't already been emailed today
+-- The Edge Function loops over them, sends, then writes last_digest_sent_at.
+-- Cron handles timing; this function just filters on state.
 drop function if exists public.list_pending_digests();
 create function public.list_pending_digests()
 returns table (
@@ -346,11 +348,10 @@ begin
     join auth.users u on u.id = p.id
     where p.email_digest_enabled = true
       and u.email is not null
-      and (p.last_digest_sent_at is null or p.last_digest_sent_at < current_date)
+      and (p.last_digest_sent_at is null or p.last_digest_sent_at::date < current_date)
   ),
   streaked as (
     select a.*,
-      -- Streak length ending at last_review_date (≥1 means there's something to lose today)
       (
         select count(*)::int
         from (
@@ -368,8 +369,7 @@ begin
   select s.id, s.email, s.username, coalesce(s.streak, 0)
   from streaked s
   where s.last_review_date = current_date - 1   -- last reviewed yesterday
-    and coalesce(s.streak, 0) >= 1               -- has a streak worth saving
-    and extract(hour from now() at time zone 'UTC') = 20;  -- 8pm UTC (~3-4pm ET)
+    and coalesce(s.streak, 0) >= 1;               -- has a streak worth saving
 end;
 $$;
 
