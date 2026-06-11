@@ -9,4 +9,13 @@ if (!url || !anonKey) {
   )
 }
 
-export const supabase = createClient(url, anonKey)
+export const supabase = createClient(url, anonKey, {
+  auth: {
+    // Google OAuth returns tokens in the URL hash (#access_token=...);
+    // implicit flow makes the client read and store them on app load.
+    flowType: 'implicit',
+    detectSessionInUrl: true,
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+})
