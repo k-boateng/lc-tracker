@@ -197,7 +197,7 @@ export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
           </div>
           <button
             onClick={onToggleDark}
-            className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ml-3 ${isDark ? 'bg-accent' : 'bg-border'}`}
+            className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ml-3 ${isDark ? 'bg-accent' : 'bg-secondary/50'}`}
           >
             <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-all duration-200 ${isDark ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
@@ -215,7 +215,7 @@ export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
           <button
             onClick={toggleDigest}
             disabled={digestEnabled === null}
-            className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ml-3 ${digestEnabled ? 'bg-accent' : 'bg-border'} ${digestEnabled === null ? 'opacity-40' : ''}`}
+            className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ml-3 ${digestEnabled ? 'bg-accent' : 'bg-secondary/50'} ${digestEnabled === null ? 'opacity-40' : ''}`}
           >
             <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-all duration-200 ${digestEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
