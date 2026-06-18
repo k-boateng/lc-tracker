@@ -272,7 +272,7 @@ security definer set search_path = public
 stable
 as $$
 declare
-  week_start date := date_trunc('week', (now() at time zone 'utc'))::date;
+  week_start date := date_trunc('week', (now() at time zone 'America/New_York'))::date;
 begin
   if not exists (
     select 1 from public.group_members gm

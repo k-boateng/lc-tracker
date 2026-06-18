@@ -4,7 +4,7 @@ import {
   fetchMyGroups, createGroup, joinGroup, leaveGroup, fetchLeaderboard, sendInvite, fetchMyInvites,
 } from '../utils/api'
 import type { GroupInfo, LeaderboardEntry, InviteRecord } from '../utils/api'
-import { computeStreak, countThisWeek, nextResetUTC } from '../utils/stats'
+import { computeStreak, countThisWeek, nextReset } from '../utils/stats'
 
 function formatCountdown(target: Date, now: number): string {
   let secs = Math.max(0, Math.floor((target.getTime() - now) / 1000))
@@ -274,7 +274,7 @@ export function Groups() {
               <div className="text-xs text-secondary mt-0.5">
                 {leaderboard.length} member{leaderboard.length !== 1 ? 's' : ''}
                 {' · '}
-                <span className="text-warning">round resets in {formatCountdown(nextResetUTC(), now)}</span>
+                <span className="text-warning">round resets in {formatCountdown(nextReset(), now)}</span>
               </div>
             </div>
             <button

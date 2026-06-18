@@ -34,7 +34,9 @@ interface PendingNudge {
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const FROM = Deno.env.get('DIGEST_FROM') ?? 'LC Tracker <noreply@lc-tracker.com>'
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://lc-tracker.com'
-const SEND_HOUR_UTC = 20
+// Fire at 4pm app-local (≈4 hours before the local-midnight streak deadline)
+const APP_TZ = 'America/New_York'
+const SEND_HOUR_LOCAL = 16
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -177,8 +179,12 @@ Deno.serve(async (req) => {
   }
 
   const force = new URL(req.url).searchParams.get('force') === 'true'
-  if (!force && new Date().getUTCHours() !== SEND_HOUR_UTC) {
-    return new Response(JSON.stringify({ skipped: 'outside send window' }), {
+  const localHour = Number(
+    new Intl.DateTimeFormat('en-US', { timeZone: APP_TZ, hour: '2-digit', hour12: false })
+      .format(new Date())
+  ) % 24
+  if (!force && localHour !== SEND_HOUR_LOCAL) {
+    return new Response(JSON.stringify({ skipped: 'outside send window', localHour }), {
       headers: { 'Content-Type': 'application/json' },
     })
   }
