@@ -1,6 +1,6 @@
-import { today } from './dates'
+import { today, addDays, zonedMidnight } from './dates'
 
-// Consecutive calendar days ending today with >=1 review.
+// Consecutive calendar days (app timezone) ending today with >=1 review.
 // Shared by the dashboard stats bar and the group leaderboard.
 export function computeStreak(reviewDates: Iterable<string>): number {
   const dates = reviewDates instanceof Set ? reviewDates : new Set(reviewDates)
@@ -10,9 +10,7 @@ export function computeStreak(reviewDates: Iterable<string>): number {
   let streak = 1
   let check = t
   while (true) {
-    const prev = new Date(check + 'T00:00:00')
-    prev.setDate(prev.getDate() - 1)
-    const prevStr = prev.toISOString().split('T')[0]
+    const prevStr = addDays(check, -1)
     if (dates.has(prevStr)) {
       streak++
       check = prevStr
@@ -33,10 +31,23 @@ export function streakAtRisk(reviewDates: Iterable<string>): number {
   return computeStreak(dates) - 1
 }
 
-// Count of dates within the last 7 calendar days (inclusive of today)
-export function countLast7Days(reviewDates: string[]): number {
-  const cutoff = new Date(today() + 'T00:00:00')
-  cutoff.setDate(cutoff.getDate() - 6)
-  const cutoffStr = cutoff.toISOString().split('T')[0]
-  return reviewDates.filter(d => d >= cutoffStr).length
+// Monday of the current week (app timezone), as a YYYY-MM-DD string.
+// Matches Postgres date_trunc('week', now() at time zone APP_TZ).
+export function weekStart(): string {
+  const t = today()
+  const dow = new Date(t + 'T12:00:00Z').getUTCDay() // 0 Sun .. 6 Sat
+  const sinceMonday = (dow + 6) % 7
+  return addDays(t, -sinceMonday)
+}
+
+// The instant the current weekly round resets: next Monday 00:00 app-local.
+export function nextReset(): Date {
+  const nextMonday = addDays(weekStart(), 7)
+  return zonedMidnight(nextMonday)
+}
+
+// Count of review dates inside the current weekly round
+export function countThisWeek(reviewDates: string[]): number {
+  const start = weekStart()
+  return reviewDates.filter(d => d >= start).length
 }

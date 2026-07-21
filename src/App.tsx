@@ -7,12 +7,36 @@ import { Analytics } from './components/Analytics'
 import { Settings } from './components/Settings'
 import { Groups } from './components/Groups'
 import { Login } from './components/Login'
+import { Landing } from './components/Landing'
 import { Onboarding } from './components/Onboarding'
 import { useProblems } from './hooks/useProblems'
 import { useDarkMode } from './hooks/useDarkMode'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { getLegacyProblems, clearLegacyProblems } from './utils/storage'
+import { joinGroup } from './utils/api'
 import type { Problem } from './types'
+
+const PENDING_INVITE_KEY = 'lc_tracker_pending_invite'
+const PENDING_INVITE_ID_KEY = 'lc_tracker_pending_invite_id'
+
+// Capture /join/<code>?i=<invite-id> from an invite link before anything
+// renders, so both survive the OAuth redirect round-trip. The i param
+// attributes the conversion to whoever sent the email.
+const joinMatch = window.location.pathname.match(/^\/join\/([a-zA-Z0-9]{4,12})$/)
+if (joinMatch) {
+  localStorage.setItem(PENDING_INVITE_KEY, joinMatch[1].toUpperCase())
+  const inviteId = new URLSearchParams(window.location.search).get('i')
+  if (inviteId) localStorage.setItem(PENDING_INVITE_ID_KEY, inviteId)
+  window.history.replaceState(null, '', '/')
+}
+
+export function getPendingInvite(): string | null {
+  return localStorage.getItem(PENDING_INVITE_KEY)
+}
+
+export function getPendingInviteId(): string | null {
+  return localStorage.getItem(PENDING_INVITE_ID_KEY)
+}
 
 function AppContent() {
   const { session, profile, loading: authLoading } = useAuth()
@@ -43,6 +67,24 @@ function AppContent() {
     }
   }, [session, dataLoading, problems.length])
 
+  // Invite link auto-join: once signed in (profile exists), consume the
+  // pending invite code. Redirect to the leaderboard only after onboarding
+  // so we don't interrupt the handle-claim screen.
+  useEffect(() => {
+    const code = getPendingInvite()
+    if (!session || !profile || !code) return
+    const inviteId = getPendingInviteId()
+    localStorage.removeItem(PENDING_INVITE_KEY)
+    localStorage.removeItem(PENDING_INVITE_ID_KEY)
+    joinGroup(code, inviteId ?? undefined)
+      .then(() => {
+        if (profile.onboarded) window.location.replace('/groups')
+      })
+      .catch(() => {
+        // bad/expired code — nothing to do, let them in normally
+      })
+  }, [session, profile])
+
   const handleLegacyImport = async () => {
     setImportBanner('importing')
     try {
@@ -66,7 +108,9 @@ function AppContent() {
   }
 
   if (!session) {
-    return <Login />
+    // Invited users skip the marketing page — straight to login with the
+    // "you've been invited" banner. Everyone else gets the landing page.
+    return getPendingInvite() ? <Login /> : <Landing />
   }
 
   // First login: claim a handle before entering the app

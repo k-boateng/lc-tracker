@@ -72,10 +72,10 @@ export function Dashboard({ problems, onAddProblem, onLogReview, openQuickLog, o
   }
 
   return (
-    <div className="h-full flex flex-col p-6 gap-6">
-      <div className="flex gap-6 flex-1 min-h-0">
+    <div className="md:h-full flex flex-col p-4 md:p-6 gap-6">
+      <div className="flex flex-col md:flex-row gap-6 md:flex-1 md:min-h-0">
         {/* Left: Review Queue */}
-        <div className="flex-1 flex flex-col min-w-0 gap-4">
+        <div className="md:flex-1 flex flex-col min-w-0 gap-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-medium text-primary">Today's Queue</h2>
             <span className="text-sm text-secondary font-mono">
@@ -100,7 +100,7 @@ export function Dashboard({ problems, onAddProblem, onLogReview, openQuickLog, o
           })()}
 
           {dueProblems.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-12 bg-surface border border-border rounded-lg">
+            <div className="md:flex-1 flex flex-col items-center justify-center text-center py-12 bg-surface border border-border rounded-lg">
               <div className="text-2xl mb-2">✓</div>
               <div className="text-primary font-medium mb-1">All caught up!</div>
               {nextUpcoming ? (
@@ -113,7 +113,7 @@ export function Dashboard({ problems, onAddProblem, onLogReview, openQuickLog, o
               )}
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+            <div className="md:flex-1 md:overflow-y-auto space-y-2 md:pr-1">
               {dueProblems.map(p => {
                 const overdue = isOverdue(p.next_review)
                 const lastComfort = p.comfort_history[p.comfort_history.length - 1]
@@ -160,7 +160,7 @@ export function Dashboard({ problems, onAddProblem, onLogReview, openQuickLog, o
         </div>
 
         {/* Right: Quick Log */}
-        <div className="w-72 flex-shrink-0">
+        <div className="w-full md:w-72 flex-shrink-0">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-medium text-primary">Log Problem</h2>
             <kbd className="text-xs px-1.5 py-0.5 border border-border rounded text-secondary font-mono">N</kbd>

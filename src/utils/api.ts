@@ -250,6 +250,7 @@ export interface LeaderboardEntry {
   // null when the deployed RPC predates these columns
   reviews_this_week: number | null
   weekly_points: number | null
+  prev_week_points: number | null
   total_points: number | null
   review_dates: string[]
 }
@@ -266,10 +267,59 @@ export async function createGroup(name: string): Promise<GroupInfo> {
   return (Array.isArray(data) ? data[0] : data) as GroupInfo
 }
 
-export async function joinGroup(code: string): Promise<string> {
-  const { data, error } = await supabase.rpc('join_group', { code })
+export async function joinGroup(code: string, inviteId?: string): Promise<string> {
+  const { data, error } = await supabase.rpc('join_group', {
+    code,
+    invite: inviteId ?? null,
+  })
   if (error) throw error
   return data as string
+}
+
+export interface InviteRecord {
+  id: string
+  email: string
+  sent_at: string
+  joined_user_id: string | null
+  joined_at: string | null
+}
+
+// Invites the current user has sent for a group (RLS scopes to own rows)
+export async function fetchMyInvites(groupId: string): Promise<InviteRecord[]> {
+  const { data, error } = await supabase
+    .from('invites')
+    .select('id, email, sent_at, joined_user_id, joined_at')
+    .eq('group_id', groupId)
+    .order('sent_at', { ascending: false })
+  if (error) return []
+  return data as InviteRecord[]
+}
+
+// Group name for an invite code — works before login (login page banner)
+export async function peekGroup(code: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('peek_group', { code })
+  if (error) return null
+  return (data as string) ?? null
+}
+
+export async function sendInvite(groupId: string, email: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('send-invite', {
+    body: { group_id: groupId, email },
+  })
+  if (error) {
+    // FunctionsHttpError carries the response; surface the real message
+    let msg = 'Failed to send invite'
+    try {
+      const ctx = (error as any).context
+      if (ctx?.json) {
+        const body = await ctx.json()
+        if (body?.error) msg = body.error
+        else if (body?.message) msg = body.message
+      }
+    } catch { /* keep generic */ }
+    throw new Error(msg)
+  }
+  if (data?.error) throw new Error(data.error)
 }
 
 export async function leaveGroup(groupId: string, userId: string): Promise<void> {
@@ -290,6 +340,7 @@ export async function fetchLeaderboard(groupId: string): Promise<LeaderboardEntr
     total_reviews: Number(e.total_reviews),
     reviews_this_week: e.reviews_this_week != null ? Number(e.reviews_this_week) : null,
     weekly_points: e.weekly_points != null ? Number(e.weekly_points) : null,
+    prev_week_points: e.prev_week_points != null ? Number(e.prev_week_points) : null,
     total_points: e.total_points != null ? Number(e.total_points) : null,
     review_dates: e.review_dates ?? [],
   }))

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { toISO } from '../utils/dates'
+import { toISO, today } from '../utils/dates'
 
 interface Props {
   reviewsByDate: Record<string, number>
@@ -108,7 +108,7 @@ export function ActivityHeatmap({ reviewsByDate }: Props) {
           {/* Cells */}
           {weeks.map((week, wi) =>
             week.map((day, row) => {
-              const isFuture = day.date > new Date().toISOString().split('T')[0]
+              const isFuture = day.date > today()
               return (
                 <rect
                   key={`${wi}-${row}`}

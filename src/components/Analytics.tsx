@@ -13,6 +13,9 @@ interface Props {
 }
 
 export function Analytics({ problems }: Props) {
+  // Pattern labels need less reserved width on phones or the bars vanish
+  const isNarrow = typeof window !== 'undefined' && window.innerWidth < 768
+  const patternLabelWidth = isNarrow ? 92 : 120
   const {
     dayCounts,
     patternData,
@@ -97,7 +100,7 @@ export function Analytics({ problems }: Props) {
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-4 md:p-6 space-y-8">
       <h2 className="text-base font-medium text-primary">Analytics</h2>
 
       {/* Heatmap */}
@@ -108,7 +111,7 @@ export function Analytics({ problems }: Props) {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Pattern breakdown */}
         <section>
           <div className="text-xs text-secondary uppercase tracking-wider mb-3">Avg Comfort by Pattern</div>
@@ -117,9 +120,9 @@ export function Analytics({ problems }: Props) {
               <div className="text-sm text-secondary text-center py-8">No data yet</div>
             ) : (
               <ResponsiveContainer width="100%" height={Math.max(200, patternData.length * 28)}>
-                <BarChart data={patternData} layout="vertical" margin={{ left: 120, right: 16, top: 4, bottom: 4 }}>
+                <BarChart data={patternData} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
                   <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 11, fill: '#545c7e' }} />
-                  <YAxis type="category" dataKey="pattern" tick={{ fontSize: 11, fill: '#545c7e' }} width={120} />
+                  <YAxis type="category" dataKey="pattern" tick={{ fontSize: isNarrow ? 10 : 11, fill: '#545c7e' }} width={patternLabelWidth} />
                   <Tooltip
                     contentStyle={tooltipStyle}
                     formatter={(v) => [Number(v).toFixed(1), 'Avg comfort']}
@@ -185,9 +188,9 @@ export function Analytics({ problems }: Props) {
             <thead className="border-b border-border">
               <tr>
                 <th className="text-left px-4 py-2.5 text-xs text-secondary font-medium">Problem</th>
-                <th className="text-left px-3 py-2.5 text-xs text-secondary font-medium">Pattern</th>
-                <th className="text-left px-3 py-2.5 text-xs text-secondary font-medium">Avg Comfort</th>
-                <th className="text-left px-3 py-2.5 text-xs text-secondary font-medium">Reviews</th>
+                <th className="hidden md:table-cell text-left px-3 py-2.5 text-xs text-secondary font-medium">Pattern</th>
+                <th className="text-left px-3 py-2.5 text-xs text-secondary font-medium">Comfort</th>
+                <th className="text-right md:text-left px-3 py-2.5 text-xs text-secondary font-medium">Reviews</th>
               </tr>
             </thead>
             <tbody>
@@ -199,14 +202,14 @@ export function Analytics({ problems }: Props) {
                       <div className="text-xs text-secondary font-mono">#{p.leetcode_number}</div>
                     )}
                   </td>
-                  <td className="px-3 py-2.5 text-xs text-secondary">{p.pattern}</td>
+                  <td className="hidden md:table-cell px-3 py-2.5 text-xs text-secondary">{p.pattern}</td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-1.5">
                       <ComfortDot comfort={Math.round(p.avgComfort)} />
                       <span className="font-mono text-xs text-primary">{p.avgComfort.toFixed(1)}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 text-xs text-secondary font-mono">{p.reviews.length}</td>
+                  <td className="px-3 py-2.5 text-xs text-secondary font-mono text-right md:text-left">{p.reviews.length}</td>
                 </tr>
               ))}
               {weakestProblems.length === 0 && (

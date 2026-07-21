@@ -247,9 +247,10 @@ $$;
 -- Leaderboard: aggregate stats only — never exposes problem/review contents.
 -- Caller must be a member of the group.
 --
--- Points: each problem scores at most once per day (anti-gaming) at
--- Easy 10 / Medium 20 / Hard 30, plus a +5 consistency bonus per active day.
--- weekly_points covers the last 7 calendar days and ranks the board.
+-- Weekly rounds: points reset every Monday 00:00 UTC. Each problem scores
+-- at most once per day (anti-gaming) at Easy 10 / Medium 20 / Hard 30,
+-- plus a +5 consistency bonus per active day. weekly_points ranks the
+-- board; prev_week_points lets the client crown last week's winner.
 --
 -- Drop first: return-type changes are rejected by CREATE OR REPLACE.
 drop function if exists public.get_group_leaderboard(uuid);
@@ -262,6 +263,7 @@ returns table (
   total_reviews bigint,
   reviews_this_week bigint,
   weekly_points bigint,
+  prev_week_points bigint,
   total_points bigint,
   review_dates date[]
 )
@@ -269,6 +271,8 @@ language plpgsql
 security definer set search_path = public
 stable
 as $$
+declare
+  week_start date := date_trunc('week', (now() at time zone 'America/New_York'))::date;
 begin
   if not exists (
     select 1 from public.group_members gm
@@ -284,14 +288,22 @@ begin
     p.avatar_url,
     (select count(*) from public.problems pr where pr.user_id = p.id),
     (select count(*) from public.reviews r where r.user_id = p.id),
-    (select count(*) from public.reviews r where r.user_id = p.id and r.date >= current_date - 6),
+    (select count(*) from public.reviews r where r.user_id = p.id and r.date >= week_start),
     (select coalesce(sum(x.pts), 0)::bigint + 5 * count(distinct x.date)
      from (
        select distinct r.problem_id, r.date,
          case pr.difficulty when 'Easy' then 10 when 'Medium' then 20 else 30 end as pts
        from public.reviews r
        join public.problems pr on pr.id = r.problem_id
-       where r.user_id = p.id and r.date >= current_date - 6
+       where r.user_id = p.id and r.date >= week_start
+     ) x),
+    (select coalesce(sum(x.pts), 0)::bigint + 5 * count(distinct x.date)
+     from (
+       select distinct r.problem_id, r.date,
+         case pr.difficulty when 'Easy' then 10 when 'Medium' then 20 else 30 end as pts
+       from public.reviews r
+       join public.problems pr on pr.id = r.problem_id
+       where r.user_id = p.id and r.date >= week_start - 7 and r.date < week_start
      ) x),
     (select coalesce(sum(x.pts), 0)::bigint + 5 * count(distinct x.date)
      from (

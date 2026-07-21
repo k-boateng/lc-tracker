@@ -1,18 +1,17 @@
 import { useMemo } from 'react'
 import type { Problem, Pattern } from '../types'
 import { today } from '../utils/dates'
-import { computeStreak } from '../utils/stats'
+import { computeStreak, weekStart } from '../utils/stats'
 
 export function useStats(problems: Problem[]) {
   return useMemo(() => {
     const totalProblems = problems.length
 
-    // Reviews in last 7 days
-    const cutoff7 = new Date(today() + 'T00:00:00')
-    cutoff7.setDate(cutoff7.getDate() - 6)
-    const cutoff7Str = cutoff7.toISOString().split('T')[0]
+    // Reviews in the current weekly round (since Monday 00:00 UTC),
+    // consistent with the group leaderboard
+    const wkStart = weekStart()
     const reviewsThisWeek = problems.reduce((acc, p) =>
-      acc + p.reviews.filter(r => r.date >= cutoff7Str).length, 0)
+      acc + p.reviews.filter(r => r.date >= wkStart).length, 0)
 
     // Streak: consecutive calendar days ending today with ≥1 review
     const allDates = new Set<string>()

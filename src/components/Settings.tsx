@@ -162,23 +162,23 @@ export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
         <div className="text-xs text-secondary uppercase tracking-wider">Account</div>
         <div>
           <div className="text-sm text-primary mb-1">Handle</div>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2 bg-bg border border-border px-3 py-2 focus-within:border-accent transition-colors">
-              <span className="text-accent text-sm">❯</span>
-              <span className="text-secondary text-sm">whoami =</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex-1 min-w-0 flex items-center gap-2 bg-bg border border-border px-3 py-2 focus-within:border-accent transition-colors">
+              <span className="text-accent text-sm flex-shrink-0">❯</span>
+              <span className="text-secondary text-sm whitespace-nowrap flex-shrink-0">whoami =</span>
               <input
                 value={handle}
                 onChange={e => setHandle(e.target.value.toLowerCase())}
                 maxLength={20}
                 spellCheck={false}
                 autoComplete="off"
-                className="flex-1 bg-transparent text-sm text-primary focus:outline-none"
+                className="flex-1 min-w-0 bg-transparent text-sm text-primary focus:outline-none"
               />
             </div>
             <button
               onClick={saveHandle}
               disabled={handleStatus !== 'available' || handleSaving}
-              className="px-4 py-2 border border-accent/40 bg-accent/5 text-sm text-accent hover:bg-accent/15 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="px-4 py-2 border border-accent/40 bg-accent/5 text-sm text-accent hover:bg-accent/15 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
             >
               {handleSaving ? 'saving…' : 'rename'}
             </button>
@@ -197,7 +197,7 @@ export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
           </div>
           <button
             onClick={onToggleDark}
-            className={`w-11 h-6 rounded-full transition-colors relative ${isDark ? 'bg-accent' : 'bg-border'}`}
+            className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ml-3 ${isDark ? 'bg-accent' : 'bg-secondary/50'}`}
           >
             <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-all duration-200 ${isDark ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
@@ -209,13 +209,13 @@ export function Settings({ problems, isDark, onToggleDark, onImport }: Props) {
         <div className="text-xs text-secondary uppercase tracking-wider">Notifications</div>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-primary">Streak-at-risk email</div>
-            <div className="text-xs text-secondary mt-0.5">When your streak might die tonight, we'll email a reminder.</div>
+            <div className="text-sm text-primary">Daily nudge email</div>
+            <div className="text-xs text-secondary mt-0.5">One email a day, max — streak at risk, rank changes, invite updates.</div>
           </div>
           <button
             onClick={toggleDigest}
             disabled={digestEnabled === null}
-            className={`w-11 h-6 rounded-full transition-colors relative ${digestEnabled ? 'bg-accent' : 'bg-border'} ${digestEnabled === null ? 'opacity-40' : ''}`}
+            className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ml-3 ${digestEnabled ? 'bg-accent' : 'bg-secondary/50'} ${digestEnabled === null ? 'opacity-40' : ''}`}
           >
             <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-all duration-200 ${digestEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>

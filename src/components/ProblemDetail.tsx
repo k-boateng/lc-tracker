@@ -55,9 +55,9 @@ export function ProblemDetail({ problem, onClose, onUpdate, onDelete, onReview }
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/70 flex items-stretch md:items-center justify-center z-40 p-0 md:p-4" onClick={onClose}>
         <div
-          className="bg-surface border border-border rounded-lg w-full max-w-2xl max-h-[85vh] overflow-y-auto"
+          className="bg-surface border border-border rounded-lg w-full md:max-w-2xl max-h-full md:max-h-[85vh] overflow-y-auto"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}

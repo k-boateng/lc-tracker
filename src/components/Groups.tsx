@@ -1,10 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  fetchMyGroups, createGroup, joinGroup, leaveGroup, fetchLeaderboard,
+  fetchMyGroups, createGroup, joinGroup, leaveGroup, fetchLeaderboard, sendInvite, fetchMyInvites,
 } from '../utils/api'
-import type { GroupInfo, LeaderboardEntry } from '../utils/api'
-import { computeStreak, countLast7Days } from '../utils/stats'
+import type { GroupInfo, LeaderboardEntry, InviteRecord } from '../utils/api'
+import { computeStreak, countThisWeek, nextReset } from '../utils/stats'
+
+function formatCountdown(target: Date, now: number): string {
+  let secs = Math.max(0, Math.floor((target.getTime() - now) / 1000))
+  const d = Math.floor(secs / 86400); secs -= d * 86400
+  const h = Math.floor(secs / 3600); secs -= h * 3600
+  const m = Math.floor(secs / 60)
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
 
 interface RankedEntry extends LeaderboardEntry {
   streak: number
@@ -26,6 +36,64 @@ export function Groups() {
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
+
+  // Tick every 30s so the round countdown stays current
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Invites I've sent for the selected group
+  const [myInvites, setMyInvites] = useState<InviteRecord[]>([])
+  useEffect(() => {
+    if (!selectedId) {
+      setMyInvites([])
+      return
+    }
+    fetchMyInvites(selectedId).then(setMyInvites)
+  }, [selectedId])
+  const recruitedIds = new Set(myInvites.map(i => i.joined_user_id).filter(Boolean))
+
+  // Share recap: copies current standings + join link to the clipboard
+  const [recapCopied, setRecapCopied] = useState(false)
+  const copyRecap = () => {
+    if (!selected) return
+    const lines = leaderboard.slice(0, 3).map((e, i) => `${i + 1}. ${e.username} ${e.points} pts`)
+    const meIdx = leaderboard.findIndex(e => e.user_id === userId)
+    if (meIdx > 2) {
+      lines.push(`…`, `${meIdx + 1}. ${leaderboard[meIdx].username} ${leaderboard[meIdx].points} pts (me)`)
+    }
+    const champ = [...leaderboard].sort((a, b) => (b.prev_week_points ?? 0) - (a.prev_week_points ?? 0))[0]
+    const champLine = champ?.prev_week_points
+      ? `\nlast week: ${champ.username} won with ${champ.prev_week_points} pts`
+      : ''
+    const text = `~/lc-tracker — ${selected.name}\n${lines.join('\n')}${champLine}\n\nthink you can hang? https://lc-tracker.com/join/${selected.invite_code}`
+    navigator.clipboard.writeText(text)
+    setRecapCopied(true)
+    setTimeout(() => setRecapCopied(false), 2000)
+  }
+
+  // Invite by email
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteState, setInviteState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [inviteError, setInviteError] = useState('')
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedId || !inviteEmail.trim() || inviteState === 'sending') return
+    setInviteState('sending')
+    setInviteError('')
+    try {
+      await sendInvite(selectedId, inviteEmail.trim())
+      setInviteState('sent')
+      setInviteEmail('')
+      fetchMyInvites(selectedId).then(setMyInvites)
+      setTimeout(() => setInviteState('idle'), 3000)
+    } catch (err: any) {
+      setInviteError(err.message ?? 'Failed to send')
+      setInviteState('error')
+    }
+  }
 
   const loadGroups = useCallback(async () => {
     try {
@@ -55,7 +123,7 @@ export function Groups() {
             ...e,
             streak: computeStreak(e.review_dates),
             // Older deployed RPC lacks these columns; fall back gracefully
-            reviewsThisWeek: e.reviews_this_week ?? countLast7Days(e.review_dates),
+            reviewsThisWeek: e.reviews_this_week ?? countThisWeek(e.review_dates),
             points: e.weekly_points ?? 0,
           }))
           .sort((a, b) =>
@@ -132,7 +200,7 @@ export function Groups() {
   }
 
   return (
-    <div className="p-6 max-w-3xl space-y-6">
+    <div className="p-4 md:p-6 max-w-3xl space-y-6">
       <h2 className="text-base font-medium text-primary">Groups</h2>
 
       {error && (
@@ -140,7 +208,7 @@ export function Groups() {
       )}
 
       {/* Create / Join */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <form onSubmit={handleCreate} className="bg-surface border border-border rounded-lg p-4 space-y-3">
           <div className="text-xs text-secondary uppercase tracking-wider">Create a group</div>
           <input
@@ -200,13 +268,22 @@ export function Groups() {
       {/* Selected group */}
       {selected ? (
         <section className="bg-surface border border-border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center gap-3">
+          <div className="px-4 py-3 border-b border-border flex items-center gap-3 flex-wrap">
             <div className="flex-1">
               <div className="text-sm text-primary font-medium">{selected.name}</div>
               <div className="text-xs text-secondary mt-0.5">
                 {leaderboard.length} member{leaderboard.length !== 1 ? 's' : ''}
+                {' · '}
+                <span className="text-warning">round resets in {formatCountdown(nextReset(), now)}</span>
               </div>
             </div>
+            <button
+              onClick={copyRecap}
+              className="px-3 py-1.5 rounded border border-accent/40 bg-accent/5 text-xs text-accent hover:bg-accent/15 transition-colors"
+              title="Copy standings + join link for your group chat"
+            >
+              {recapCopied ? '✓ copied' : 'share ❯'}
+            </button>
             <button
               onClick={() => copyCode(selected.invite_code)}
               className="px-3 py-1.5 rounded border border-border text-xs text-secondary hover:text-primary hover:border-secondary transition-colors font-mono tracking-widest"
@@ -227,10 +304,51 @@ export function Groups() {
             </button>
           </div>
 
+          {/* Invite by email */}
+          <form onSubmit={handleInvite} className="px-4 py-2.5 border-b border-border flex items-center gap-2">
+            <span className="text-xs text-secondary flex-shrink-0">invite ❯</span>
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={e => { setInviteEmail(e.target.value); if (inviteState === 'error') setInviteState('idle') }}
+              placeholder="friend@email.com"
+              className="flex-1 bg-bg border border-border px-2 py-1.5 text-xs text-primary placeholder:text-secondary/40 focus:outline-none focus:border-accent"
+            />
+            <button
+              type="submit"
+              disabled={inviteState === 'sending' || !inviteEmail.includes('@')}
+              className="px-3 py-1.5 border border-accent/40 bg-accent/5 text-xs text-accent hover:bg-accent/15 transition-colors disabled:opacity-30 flex-shrink-0"
+            >
+              {inviteState === 'sending' ? 'sending…' : inviteState === 'sent' ? '✓ sent' : (
+                <><span className="md:hidden">send</span><span className="hidden md:inline">send invite</span></>
+              )}
+            </button>
+          </form>
+          {inviteState === 'error' && (
+            <div className="px-4 py-2 border-b border-border text-xs text-danger">{inviteError}</div>
+          )}
+          {myInvites.length > 0 && (
+            <div className="px-4 py-2 border-b border-border text-xs text-secondary/70">
+              your invites: {myInvites.length} sent · {myInvites.filter(i => i.joined_user_id).length} joined
+            </div>
+          )}
+
           {boardLoading ? (
             <div className="text-sm text-secondary text-center py-8">loading leaderboard…</div>
           ) : (
             <>
+              {(() => {
+                const top = [...leaderboard].sort(
+                  (a, b) => (b.prev_week_points ?? 0) - (a.prev_week_points ?? 0)
+                )[0]
+                if (!top || !top.prev_week_points) return null
+                return (
+                  <div className="px-4 py-2 border-b border-border text-xs text-secondary">
+                    last week's winner: <span className="text-accent">{top.username}</span>
+                    {' — '}<span className="font-display font-bold text-warning">{top.prev_week_points}</span> pts
+                  </div>
+                )
+              })()}
               {(() => {
                 const meIdx = leaderboard.findIndex(e => e.user_id === userId)
                 if (meIdx === -1 || leaderboard.length < 2) return null
@@ -257,8 +375,8 @@ export function Groups() {
                     <th className="text-left px-3 py-2.5 text-xs text-secondary font-medium">member</th>
                     <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">pts / wk</th>
                     <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">streak</th>
-                    <th className="text-right px-3 py-2.5 text-xs text-secondary font-medium">reviews / wk</th>
-                    <th className="text-right px-4 py-2.5 text-xs text-secondary font-medium">solved</th>
+                    <th className="hidden md:table-cell text-right px-3 py-2.5 text-xs text-secondary font-medium">reviews / wk</th>
+                    <th className="hidden md:table-cell text-right px-4 py-2.5 text-xs text-secondary font-medium">solved</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,6 +402,11 @@ export function Groups() {
                             <span className={`text-xs ${isMe ? 'text-accent' : 'text-primary'}`}>
                               {entry.username}{isMe ? ' (you)' : ''}
                             </span>
+                            {recruitedIds.has(entry.user_id) && (
+                              <span className="text-[10px] text-success/70 border border-success/30 px-1 py-0.5 flex-shrink-0">
+                                your invite
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-3 py-2.5 text-right font-display font-bold text-accent">{entry.points}</td>
@@ -292,15 +415,15 @@ export function Groups() {
                             {entry.streak === 0 ? '—' : `${entry.streak}d`}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-right text-primary">{entry.reviewsThisWeek}</td>
-                        <td className="px-4 py-2.5 text-right text-primary">{entry.total_problems}</td>
+                        <td className="hidden md:table-cell px-3 py-2.5 text-right text-primary">{entry.reviewsThisWeek}</td>
+                        <td className="hidden md:table-cell px-4 py-2.5 text-right text-primary">{entry.total_problems}</td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
               <div className="px-4 py-2 border-t border-border text-xs text-secondary/70">
-                pts: easy 10 · medium 20 · hard 30 — each problem scores once per day, +5 per active day
+                weekly round · resets monday 00:00 utc · easy 10 / medium 20 / hard 30 · each problem scores once per day · +5 per active day
               </div>
             </>
           )}

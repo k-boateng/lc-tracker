@@ -1,11 +1,20 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { peekGroup } from '../utils/api'
+import { getPendingInvite } from '../App'
 
 export function Login() {
   const { signInWithGoogle } = useAuth()
+  const [invitedTo, setInvitedTo] = useState<string | null>(null)
+
+  useEffect(() => {
+    const code = getPendingInvite()
+    if (code) peekGroup(code).then(setInvitedTo)
+  }, [])
 
   return (
-    <div className="h-screen flex items-center justify-center bg-bg text-primary font-mono">
-      <div className="bg-surface border border-border w-96">
+    <div className="min-h-screen flex items-center justify-center bg-bg text-primary font-mono p-4">
+      <div className="bg-surface border border-border w-full max-w-sm">
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
           <span className="w-2.5 h-2.5 rounded-full bg-danger/60" />
           <span className="w-2.5 h-2.5 rounded-full bg-warning/60" />
@@ -19,6 +28,12 @@ export function Login() {
               <span className="text-accent">❯</span> spaced repetition for problem grinding
             </div>
           </div>
+
+          {invitedTo && (
+            <div className="text-xs text-warning border border-warning/40 bg-warning/10 px-3 py-2.5 leading-relaxed">
+              ❯ you've been invited to join <span className="font-medium">{invitedTo}</span> — sign in and you're on the leaderboard
+            </div>
+          )}
 
           <button
             onClick={signInWithGoogle}
