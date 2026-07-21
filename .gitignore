@@ -25,3 +25,7 @@ dist-ssr
 .gstack/
 
 .vercel
+
+# lc-notes extension: local secrets, not the checked-in template
+extension/config.local.js
+extension/extension-key.pem

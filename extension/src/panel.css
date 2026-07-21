@@ -1,0 +1,288 @@
+/* Ported from the main app's actual design tokens, not approximated:
+ *   - Colors: src/index.css .dark block (Tokyo Night derived) + the
+ *     accent/success/warning/danger hexes from tailwind.config.js.
+ *   - border-radius: 0 everywhere except pills — tailwind.config.js
+ *     overrides every Tailwind radius scale step to '0' ("Terminal
+ *     aesthetic: sharp corners everywhere except pills/dots"), only
+ *     `rounded-full` survives. There is no box-shadow anywhere in the
+ *     app either (flat, border-only cards) — intentionally not added
+ *     here despite this being a floating overlay.
+ *   - Header dots: the exact traffic-light chrome bar from
+ *     Login.tsx / Onboarding.tsx (w-2.5 h-2.5 rounded-full, bg-danger/60
+ *     etc. at 60% opacity).
+ *   - Badges: DifficultyBadge.tsx, PatternTag.tsx, and the OVERDUE
+ *     badge inline in Dashboard.tsx.
+ *   - Comfort colors: ComfortRating.tsx's COMFORT_COLORS ramp.
+ *   - Form fields / buttons: ReviewModal.tsx and ProblemLibrary.tsx's
+ *     filter inputs.
+ *
+ * Everything is scoped under #lc-notes-panel so nothing leaks into or
+ * gets overridden by leetcode.com's own styles.
+ *
+ * Font: the app uses 'IBM Plex Mono' (loaded from Google Fonts in
+ * index.html). This extension doesn't fetch that webfont itself — doing
+ * so would mean a request to fonts.googleapis.com on every leetcode.com
+ * page load just for a floating panel — so it falls back to the
+ * platform's own monospace stack when Plex isn't installed locally.
+ */
+
+#lc-notes-panel {
+  --lcn-bg: #0b0e14;
+  --lcn-surface: #0f131b;
+  --lcn-border: #1b2233;
+  --lcn-primary: #c8d3f5;
+  --lcn-secondary: #545c7e;
+  --lcn-accent: #22d3ee;
+  --lcn-success: #9ece6a;
+  --lcn-warning: #e0af68;
+  --lcn-danger: #f7768e;
+  --lcn-font: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  position: fixed;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--lcn-surface);
+  color: var(--lcn-primary);
+  border: 1px solid var(--lcn-border);
+  border-radius: 0;
+  font-family: var(--lcn-font);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+#lc-notes-panel * {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+/* ---- header: same terminal-window chrome as Login.tsx / Onboarding.tsx ---- */
+#lc-notes-panel .lcn-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--lcn-border);
+  cursor: move;
+  user-select: none;
+  flex-shrink: 0;
+}
+#lc-notes-panel .lcn-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+#lc-notes-panel .lcn-dot-danger { background: rgba(247, 118, 142, 0.6); }
+#lc-notes-panel .lcn-dot-warning { background: rgba(224, 175, 104, 0.6); }
+#lc-notes-panel .lcn-dot-success { background: rgba(158, 206, 106, 0.6); }
+#lc-notes-panel .lcn-title {
+  font-size: 12px;
+  color: var(--lcn-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+#lc-notes-panel .lcn-collapse-btn {
+  border: none;
+  background: transparent;
+  color: var(--lcn-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+#lc-notes-panel .lcn-collapse-btn:hover { color: var(--lcn-primary); }
+
+#lc-notes-panel.lcn-collapsed .lcn-body,
+#lc-notes-panel.lcn-collapsed .lcn-resize-handle {
+  display: none;
+}
+
+/* ---- body ---- */
+#lc-notes-panel .lcn-body {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ---- resize handle ---- */
+#lc-notes-panel .lcn-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg,
+    transparent 0 50%, var(--lcn-border) 50% 60%,
+    transparent 60% 70%, var(--lcn-border) 70% 80%,
+    transparent 80% 100%);
+}
+
+/* ---- form fields — ReviewModal.tsx / ProblemLibrary.tsx filter inputs ---- */
+#lc-notes-panel .lcn-field { margin-bottom: 8px; }
+#lc-notes-panel .lcn-field-label {
+  font-size: 11px;
+  color: var(--lcn-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+/* ---- read-only notes block — "not due" panel. Same nested-info-box
+ * recipe as the "Solve this problem from scratch..." box in
+ * ReviewModal.tsx (bg-bg + border-border + padding), not --lcn-surface:
+ * the panel body itself already sits on --lcn-surface, so a
+ * --lcn-surface block nested inside it would have no contrast. */
+#lc-notes-panel .lcn-notes-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--lcn-border);
+}
+#lc-notes-panel .lcn-notes-block {
+  margin-top: 8px;
+  background: var(--lcn-bg);
+  border: 1px solid var(--lcn-border);
+  padding: 12px 14px;
+  color: var(--lcn-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+#lc-notes-panel input[type="text"],
+#lc-notes-panel select,
+#lc-notes-panel textarea {
+  width: 100%;
+  background: var(--lcn-bg);
+  border: 1px solid var(--lcn-border);
+  border-radius: 0;
+  color: var(--lcn-primary);
+  font-size: 13px;
+  padding: 6px 10px;
+  outline: none;
+}
+#lc-notes-panel input[type="text"]::placeholder,
+#lc-notes-panel textarea::placeholder {
+  color: rgba(84, 92, 126, 0.5); /* text-secondary/50 */
+}
+#lc-notes-panel input[type="text"]:focus,
+#lc-notes-panel select:focus,
+#lc-notes-panel textarea:focus {
+  border-color: var(--lcn-accent);
+}
+#lc-notes-panel input[readonly] {
+  color: var(--lcn-secondary);
+  background: var(--lcn-surface);
+}
+#lc-notes-panel textarea { resize: none; }
+
+/* ---- buttons ---- */
+/* Solid accent submit — ReviewModal.tsx's "Submit Review" button. */
+#lc-notes-panel .lcn-btn-primary {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  background: var(--lcn-accent);
+  color: #fff;
+  border: none;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+#lc-notes-panel .lcn-btn-primary:hover:not(:disabled) { background: rgba(34, 211, 238, 0.9); }
+#lc-notes-panel .lcn-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Outlined/muted utility button — ReviewModal.tsx's timer "Pause"/"Resume". */
+#lc-notes-panel .lcn-btn-secondary {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--lcn-border);
+  border-radius: 0;
+  color: var(--lcn-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+#lc-notes-panel .lcn-btn-secondary:hover { color: var(--lcn-primary); border-color: var(--lcn-secondary); }
+
+/* ---- status / info text ---- */
+#lc-notes-panel .lcn-status-error { color: var(--lcn-danger); font-size: 12px; margin-top: 6px; }
+#lc-notes-panel .lcn-muted { color: var(--lcn-secondary); font-size: 12px; }
+#lc-notes-panel .lcn-draft-note { color: var(--lcn-success); font-size: 11px; margin-bottom: 8px; }
+#lc-notes-panel .lcn-info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* ---- badges — DifficultyBadge.tsx / PatternTag.tsx / Dashboard.tsx OVERDUE ---- */
+#lc-notes-panel .lcn-badge {
+  display: inline-block;
+  border: 1px solid;
+  border-radius: 0;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+#lc-notes-panel .lcn-badge-easy { color: var(--lcn-success); border-color: rgba(158, 206, 106, 0.4); background: rgba(158, 206, 106, 0.1); }
+#lc-notes-panel .lcn-badge-medium { color: var(--lcn-warning); border-color: rgba(224, 175, 104, 0.4); background: rgba(224, 175, 104, 0.1); }
+#lc-notes-panel .lcn-badge-hard { color: var(--lcn-danger); border-color: rgba(247, 118, 142, 0.4); background: rgba(247, 118, 142, 0.1); }
+#lc-notes-panel .lcn-badge-overdue {
+  color: var(--lcn-danger);
+  background: rgba(247, 118, 142, 0.2);
+  border-color: rgba(247, 118, 142, 0.3);
+}
+#lc-notes-panel .lcn-pattern-tag {
+  display: inline-block;
+  font-size: 12px;
+  padding: 2px 6px;
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--lcn-accent);
+}
+
+/* ---- comfort rating — ComfortRating.tsx ---- */
+#lc-notes-panel .lcn-comfort-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+#lc-notes-panel .lcn-comfort-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid var(--lcn-comfort-border);
+  background: var(--lcn-comfort-bg);
+  color: var(--lcn-comfort-color);
+  font-size: 11px;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+#lc-notes-panel .lcn-comfort-btn:hover { filter: brightness(1.25); }
+#lc-notes-panel .lcn-comfort-num { font-weight: 500; }
+#lc-notes-panel .lcn-comfort-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+#lc-notes-panel .lcn-comfort-btn.lcn-selected {
+  background: var(--lcn-comfort-color);
+  border-color: var(--lcn-comfort-color);
+  color: var(--lcn-bg);
+}
+
+/* ---- timer (review mode) ---- */
+#lc-notes-panel .lcn-timer-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+#lc-notes-panel .lcn-timer-value { font-size: 16px; color: var(--lcn-primary); }

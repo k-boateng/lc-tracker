@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>lc-notes</title>
+  <style>
+    /* Same dark-theme tokens as panel.css (src/index.css .dark block +
+     * tailwind.config.js accent/danger hexes) — duplicated rather than
+     * sharing the file, since panel.css is deliberately scoped under
+     * #lc-notes-panel (the injected overlay on leetcode.com) and this is
+     * a separate, self-contained extension page with its own <body> as
+     * root. See panel.css's header comment for the full source mapping;
+     * these are the same values, just declared on :root instead. */
+    :root {
+      --lcn-bg: #0b0e14;
+      --lcn-surface: #0f131b;
+      --lcn-border: #1b2233;
+      --lcn-primary: #c8d3f5;
+      --lcn-secondary: #545c7e;
+      --lcn-accent: #22d3ee;
+      --lcn-danger: #f7768e;
+      --lcn-font: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      width: 260px;
+      margin: 0;
+      padding: 14px;
+      background: var(--lcn-bg);
+      color: var(--lcn-primary);
+      font-family: var(--lcn-font);
+      font-size: 13px;
+    }
+
+    .lcn-title {
+      font-weight: bold;
+      color: var(--lcn-primary);
+      margin-bottom: 8px;
+    }
+    .lcn-muted { color: var(--lcn-secondary); font-size: 12px; margin-top: 6px; }
+    .lcn-status-error { color: var(--lcn-danger); font-size: 12px; margin-top: 8px; }
+
+    button {
+      width: 100%;
+      padding: 8px;
+      font-family: var(--lcn-font);
+      font-size: 13px;
+      border-radius: 0;
+      cursor: pointer;
+    }
+    /* Filled accent — same recipe as panel.css's .lcn-btn-primary, for
+     * the popup's primary action (sign in). */
+    .lcn-btn-primary {
+      background: var(--lcn-accent);
+      color: #fff;
+      border: none;
+      font-weight: 500;
+      transition: background-color 0.15s;
+    }
+    .lcn-btn-primary:hover { background: rgba(34, 211, 238, 0.9); }
+    /* Outlined/muted — same recipe as panel.css's .lcn-btn-secondary, for
+     * the popup's lower-emphasis action (sign out). */
+    .lcn-btn-secondary {
+      background: transparent;
+      border: 1px solid var(--lcn-border);
+      color: var(--lcn-secondary);
+      margin-top: 10px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .lcn-btn-secondary:hover { color: var(--lcn-primary); border-color: var(--lcn-secondary); }
+  </style>
+</head>
+<body>
+  <div id="app">Loading…</div>
+  <script src="config.local.js"></script>
+  <script src="src/session.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "lc-notes",
+  "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxyw3Ec2N8LBuU4iNuHQVhj0SC8ZKPCGOBrM3uVdTLYe5AKvV9vKYZknh5lot7ULtx46aYgrjxjiX3i9O6lNKfy/TrN9hiVDbK6nx8JzMT0VdSwfub5UjubjsA31neTfBCwz9ECYtZ4jMFpEEgKkTwWC+jbO77lPGsLLRni9sWHe7VMBGGcgJcfwgp013EsfMHzJ37F5wIkZDxpiBNJB4pGJUorLfHkwAut9crfXzLNcNP/PZGYf9k9yIkKLcMz2bPstwe+Cu0I3jIgwXvGrbFJ3GjBX+PtQmMz24oPOD3yGaX07ujySgjZVWn03jetc3mhh6VZAkSES7mBsKzKwF9wIDAQAB",
+  "description": "Log and review LeetCode problems into lc-tracker without leaving the problem page.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "lc-notes"
+  },
+  "permissions": ["storage", "identity"],
+  "host_permissions": [
+    "https://nwvltwgpkottizjkkiei.supabase.co/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/problems/*"],
+      "css": ["src/panel.css"],
+      "js": [
+        "config.local.js",
+        "vendor/supabase.js",
+        "src/dates.js",
+        "src/sm2.js",
+        "src/patterns.js",
+        "src/session.js",
+        "src/supabaseClient.js",
+        "src/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
